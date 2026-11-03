@@ -1,0 +1,139 @@
+{
+  "projects": [
+    {
+      "id": "transmarko", "name": "Transmarko / Skorpios", "type": "Cliente (consultoría)", "stage": "en_ejecucion", "sort_order": 1,
+      "last_update": "Fase 2: RAT y aviso de privacidad laboral; arranca frente SGSI",
+      "next_step": "Cerrar fase 3 (20-nov): políticas, contratos, EIPD, capacitación",
+      "no_repo_note": "Solo documentos (tablero en Jira, proyecto KAN)",
+      "repos": [],
+      "status": [
+        "Programa 21.663 + 21.719 por UF 310 + IVA en 4 cuotas (1 pagada, 3 por cobrar)",
+        "Alcance: 12 sociedades del grupo, 8 en alcance; RAT preliminar con 25 actividades",
+        "Frente nuevo: SGSI con Declaración de Aplicabilidad por entidad, sea o no OIV",
+        "Textos de privacidad para el flujo de reserva de Skorpios y canal de agencias",
+        "Legal interno del grupo cierra los contratos; Cumbre Sur entrega borradores técnicos"
+      ],
+      "questions": [
+        "¿Las naves de cabotaje tienen Documento de Cumplimiento IGS (circular O-75/006)?",
+        "¿El SGSI entra en las UF 310 o es una extensión con precio propio?",
+        "¿Qué hito gatilla cada una de las 3 cuotas pendientes?"
+      ]
+    },
+    {
+      "id": "cumbre-sur", "name": "Cumbre Sur Tech", "type": "Empresa", "stage": "en_ejecucion", "sort_order": 2,
+      "last_update": "Sitio, catálogo de servicios y mapa de prospectos listos",
+      "next_step": "Mover pipeline comercial en Los Lagos",
+      "repos": ["rgaeted/cumbresur"],
+      "status": [
+        "Sitio cumbresurconsultores.cl con 3 niveles: Diagnóstico Express (UF 40), Implementación (UF 200), DPO como Servicio (UF 15/mes)",
+        "Catálogo de 5 productos con 9 cláusulas críticas de contrato",
+        "Mapa de prospectos Tier 1: proveedores acuícolas/marítimos y clínicas privadas",
+        "Canal comercial con partner que vende mientras Ricardo ejecuta"
+      ],
+      "questions": [
+        "¿Cómo usar Transmarko como caso de referencia para el Tier 1 marítimo?",
+        "¿El kit autoservicio 21.719 vive bajo Cumbre Sur o bajo FaroTrust?"
+      ]
+    },
+    {
+      "id": "farotrust", "name": "FaroTrust", "type": "Producto SaaS", "stage": "en_desarrollo", "sort_order": 3,
+      "last_update": "Módulo SGSI con importador de inventario",
+      "next_step": "Definir MVP: dashboard + RAT + task manager",
+      "repos": ["rgaeted/farotrust"],
+      "status": [
+        "Módulo SGSI (/sgsi) con wizard de 4 pasos que importa activos desde Excel/CSV",
+        "3 plantillas de inventario: sistemas, repositorios, proveedores",
+        "Preferencia por descubrimiento automático de activos (M365 + on-premise)"
+      ],
+      "questions": [
+        "¿Queda FaroTrust como nombre final?",
+        "¿Qué entregables de Transmarko se convierten en plantillas del producto?",
+        "¿Primer cliente piloto: Transmarko u otro?"
+      ]
+    },
+    {
+      "id": "ligalab", "name": "LigaLab", "type": "Producto (app)", "stage": "en_desarrollo", "sort_order": 4,
+      "last_update": "Formato probado 5 semanas en la pichanga de los lunes",
+      "next_step": "Conversar con el dueño de la liga de 4 categorías",
+      "repos": ["rgaeted/mipartido", "rgaeted/liga-futbol"],
+      "status": [
+        "Caso base: grupo de WhatsApp de ~50 personas, 22 cupos, inscripción los viernes",
+        "Árbitro registra eventos en línea + medalla al MVP de cada equipo",
+        "Foco técnico: lista de espera, cupos seguros ante concurrencia, enlaces seguros",
+        "Liga interesada: 4 categorías adultas × 8 equipos"
+      ],
+      "questions": ["¿Modelo con la liga externa: socio, cliente pagado o piloto gratis?"]
+    },
+    {
+      "id": "regatas", "name": "App de regatas", "type": "Producto (app)", "stage": null, "sort_order": 5,
+      "last_update": "", "next_step": "", "repos": [], "status": [],
+      "questions": ["¿Para quién es (club, organizadores, regatistas) y qué problema resuelve?"]
+    },
+    {
+      "id": "gsc-central", "name": "Sistema central GSC Chile", "type": "Cliente (software)", "stage": "explorando", "sort_order": 6,
+      "last_update": "Revisión funcional/UX del ERP de gestión",
+      "next_step": "Definir alcance de la consolidación",
+      "repos": ["rgaeted/gsc-central"],
+      "status": [
+        "ERP en PHP (gestion.gscchile.cl): cursos, inventario, RR.HH. y configuración",
+        "App en Google Apps para el registro del prevencionista de riesgos",
+        "App contadora de aforo por evento",
+        "Dos ejes posibles: persona/trabajador y operación/eventos"
+      ],
+      "questions": [
+        "¿Se reescribe todo o se integra por etapas sobre el ERP PHP?",
+        "¿Proyecto cerrado o producto reutilizable para otras empresas de seguridad?"
+      ]
+    },
+    {
+      "id": "volterra", "name": "Volterra", "type": "E-commerce propio", "stage": "en_ejecucion", "sort_order": 7,
+      "last_update": "Rediseño home + calculadora kW, bundles residencial/rural",
+      "next_step": "Vender al Estado vía Mercado Público",
+      "repos": ["rgaeted/volterra"],
+      "status": [
+        "Equipos de fuerza: generadores, motobombas, herramientas",
+        "Calculadora interactiva de carga en kW",
+        "Comisión de 10% sobre neto por venta de generador referida"
+      ],
+      "questions": [
+        "¿Qué se necesita para inscribirse como proveedor en Mercado Público?",
+        "¿Qué pasarela de pago queda: Webpay, Flow, Mercado Pago o Khipu?"
+      ]
+    },
+    {
+      "id": "tenis", "name": "App de tenis Puerto Varas", "type": "Producto (app)", "stage": "explorando", "sort_order": 8,
+      "last_update": "Diagnóstico: pocas canchas, acaparamiento, cancelaciones",
+      "next_step": "Hablar con el dueño de cancha que usa EasyCancha",
+      "repos": ["rgaeted/tennis-torneo"],
+      "status": [
+        "5 canchas en total: 2 de club privado y 3 siempre ocupadas",
+        "Dolores: no saber con quién jugar, horas canceladas, acaparamiento de slots"
+      ],
+      "questions": [
+        "¿Se integra con EasyCancha o compite con él?",
+        "¿Comparte motor con LigaLab (cupos, lista de espera, enlaces)?"
+      ]
+    },
+    {
+      "id": "kit-21719", "name": "Kit autoservicio Ley 21.719", "type": "Producto (Cumbre Sur)", "stage": "idea", "sort_order": 9,
+      "last_update": "Decidido: cuestionario que genera kit de documentos",
+      "next_step": "Diseñar el cuestionario y el canal contadores/gremios",
+      "repos": [],
+      "status": ["Para micro-empresas; distribución vía contadores y gremios"],
+      "questions": []
+    },
+    {
+      "id": "timbre-api", "name": "API de facturación (DTE)", "type": "Producto (API)", "stage": "idea", "sort_order": 10,
+      "last_update": "Nombres candidatos: Timbre, Folio",
+      "next_step": "Validar si vale la pena",
+      "repos": ["rgaeted/timbre-api"], "status": [], "questions": []
+    },
+    {
+      "id": "chatbot", "name": "Chatbot WhatsApp con IA", "type": "Herramienta interna", "stage": "explorando", "sort_order": 11,
+      "last_update": "Arquitectura con 360dialog + API de Anthropic",
+      "next_step": "Elegir el primer caso: Volterra o Cumbre Sur",
+      "repos": [], "status": [], "questions": []
+    }
+  ],
+  "inbox": ["App de fletes de retorno (corredor Santiago–Puerto Montt)"]
+}
