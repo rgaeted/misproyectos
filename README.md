@@ -1,21 +1,58 @@
 # Mis proyectos
 
-Tablero personal implementado con Next.js 15, TypeScript estricto, Tailwind 4, Drizzle/PostgreSQL y Auth.js con GitHub. La interfaz sigue los colores y la tipografía de `SPEC-mis-proyectos.md`.
+Tableros personales privados con Next.js 15, TypeScript, Tailwind, Drizzle/PostgreSQL y Auth.js. Producción: https://misproyectos-five.vercel.app.
 
-## Requisitos y ejecución
+## Cuentas
 
-Node 20.19 o superior, pnpm 10 y una base PostgreSQL. En Windows usa `pnpm.cmd` si PowerShell bloquea los scripts `.ps1`. Si pnpm no está instalado, puedes ejecutar `npm.cmd exec --yes --package=pnpm@10.32.1 -- pnpm <comando>`.
+- Registro con nombre, correo y contraseña en `/register`; inicio de sesión en `/login`.
+- Acceso con GitHub, que crea la cuenta automáticamente la primera vez.
+- Cada cuenta nueva empieza con un tablero vacío. Proyectos, listas, ideas, repositorios y caché pertenecen a su usuario.
+- Los datos originales de `rgaeted` pertenecen a su identidad inmutable de GitHub, `289845187`. Para acceder a ellos se debe seguir usando **Continuar con GitHub**. Una cuenta de correo es independiente, aunque use el mismo email; no se vinculan cuentas por coincidencia de correo.
 
-1. Ejecuta `pnpm install`.
-2. Copia `.env.example` a `.env.local` y completa sus valores. No subas ese archivo al repositorio.
-3. Crea una OAuth App de GitHub con callback `http://localhost:3000/api/auth/callback/github`. Para producción usa el dominio de Vercel en la URL del callback; conviene una OAuth App separada.
-4. Genera `AUTH_SECRET` con `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`. Configura `ALLOWED_GITHUB_LOGIN=rgaeted`.
-5. Ejecuta `pnpm db:migrate` y `pnpm db:seed`.
-6. Ejecuta `pnpm dev` y abre http://localhost:3000. Inicia sesión con la cuenta permitida.
+Las contraseñas usan scrypt con sal aleatoria y comparación constante, con un mínimo de 12 y máximo de 128 caracteres. El acceso y el registro tienen límites de intentos persistidos en PostgreSQL. Esta versión no incluye verificación del correo ni recuperación de contraseña por email.
 
-El seed carga los 11 proyectos y la idea de la especificación. Repetirlo no duplica ni borra los ítems existentes. Los datos de GitHub se consultan al presionar **Actualizar** en la ficha o mediante el cron; no se inventa actividad mientras falta el token. Sin configuración de autenticación y base de datos, la aplicación no ofrece un modo de acceso sin sesión.
+## Próximos pasos
 
-## Comprobaciones
+Cada proyecto admite varios próximos pasos. Se agregan y editan desde su ficha, con estados **Por trabajar**, **En espera** y **Completado**. Un paso en espera puede indicar qué falta, por ejemplo una aprobación o una respuesta. El texto se guarda al salir del campo; las flechas permiten cambiar el orden.
+
+Las tarjetas muestran hasta dos pasos pendientes, su estado, el motivo de espera y los conteos. Los completados permanecen en la ficha, pero no se presentan como trabajo pendiente. La migración `0004_project_steps` conservó los 13 textos anteriores como primer paso de sus proyectos, sin modificar los 17 proyectos existentes.
+
+Las pruebas de producción comprobaron crear, editar, ordenar, completar y eliminar pasos, conservarlos al recargar, limpiar el motivo al dejar de esperar y rechazar cuatro operaciones desde otra cuenta. Se revisó la ficha en móvil. Las cuentas temporales se eliminaron al terminar.
+
+## Desarrollo
+
+Requiere Node 24 y pnpm 10. En PowerShell utiliza `pnpm.cmd` o `npm.cmd exec --yes --package=pnpm@10.32.1 -- pnpm <comando>`.
+
+1. Instala dependencias con `pnpm install --frozen-lockfile`.
+2. Crea `.env.local` a partir de `.env.example` y configura sus valores. Conserva las credenciales existentes si el archivo ya existe.
+3. Genera un `AUTH_SECRET` aleatorio y configura la OAuth App de GitHub.
+4. Ejecuta `pnpm db:migrate`.
+5. Opcionalmente ejecuta `pnpm db:seed`: solo carga los datos de la cuenta histórica de `rgaeted`, preservando los existentes. No carga datos en las cuentas nuevas.
+6. Ejecuta `pnpm dev`.
+
+Variables del servidor: `DATABASE_URL`, `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` y `CRON_SECRET`. El callback de producción es `https://misproyectos-five.vercel.app/api/auth/callback/github`. Para desarrollo conviene una OAuth App separada con `http://localhost:3000/api/auth/callback/github`.
+
+`.env.local` usa el pool de sesión de Supabase (5432) para migraciones. Vercel usa el pool de transacciones (6543), TLS y la credencial dedicada. Las variables son secretos de Production y no se copian automáticamente a Preview. Los archivos privados y `.vercel/` están excluidos de Git y de las subidas a Vercel.
+
+## Datos y aislamiento
+
+`users` guarda las identidades de correo o GitHub. `projects`, `inbox` y `repo_snapshots` tienen propietario; las listas, los próximos pasos y los repositorios heredan la propiedad de su proyecto. Las acciones validan la sesión y la pertenencia de los recursos.
+
+Las seis tablas de datos usan RLS forzado, incluso para su propietario de PostgreSQL. Cada operación usa una transacción con `set_config('app.user_id', ..., true)`, por lo que el contexto se elimina al terminar y no pasa a otra petición. Sin contexto no se pueden consultar los proyectos. Las tablas internas de autenticación tienen RLS activado sin políticas públicas y se usan únicamente desde el servidor.
+
+La caché de 30 segundos incluye el identificador de usuario en su clave y etiqueta. Los cambios invalidan únicamente la etiqueta del propietario. `DATABASE_SCHEMA` permite apuntar un despliegue privado de pruebas a un esquema separado; en producción se deja sin definir para utilizar `public`.
+
+La migración `0002_multiuser_accounts` asigna los datos existentes a `rgaeted` antes de exigir la propiedad. `0003_private_user_policies` activa el aislamiento. No vuelvas a una versión anterior de la aplicación después de migrar. Las sesiones anteriores al cambio multiusuario requieren iniciar sesión de nuevo.
+
+## GitHub y cron
+
+Cada cuenta de GitHub guarda su propio token OAuth cifrado con AES-256-GCM. No se envía al navegador ni se comparte entre usuarios. Las cuentas de correo pueden guardar enlaces a repositorios, pero no tienen una integración GitHub conectada. Los permisos del token determinan qué repositorios se pueden consultar. Cambiar `AUTH_SECRET` requiere volver a entrar con GitHub para renovar los tokens cifrados.
+
+El cron `/api/cron/refresh-repos` exige `Authorization: Bearer <CRON_SECRET>`. Recorre los repositorios y credenciales por usuario e invalida su caché. Conserva ETags y detiene las peticiones cuando la cuota restante es baja. `vercel.json` lo programa diariamente a las 09:00 UTC, compatible con Hobby.
+
+## Rendimiento y comprobaciones
+
+Las funciones se ejecutan en São Paulo (`gru1`), junto a Supabase. El runtime utiliza `pg` con `attachDatabasePool` de Vercel para gestionar conexiones al suspender instancias. Archivo se sirve desde la propia app con `next/font`.
 
 ```sh
 pnpm lint
@@ -24,22 +61,8 @@ pnpm test
 pnpm build
 ```
 
-Para e2e, inicia la app y ejecuta `pnpm exec playwright install chromium` y `pnpm test:e2e`. La prueba de acceso requiere la configuración OAuth/`AUTH_SECRET`. Los flujos con sesión requieren `E2E_STORAGE_STATE` apuntando a un archivo de sesión de Playwright de la cuenta autorizada y una base de pruebas migrada y con seed. Ese archivo contiene cookies privadas: guárdalo fuera del repositorio. `E2E_BASE_URL` permite cambiar la URL. Las pruebas crean y archivan proyectos de prueba.
+Para Playwright instala Chromium y ejecuta `pnpm test:e2e` con `E2E_BASE_URL`. Los flujos autenticados requieren un `E2E_STORAGE_STATE` privado, fuera del repositorio. Las pruebas originales de edición crean y archivan proyectos.
 
-## Vercel y GitHub
+El 4 de noviembre de 2026 pasaron 25 pruebas unitarias, TypeScript y la compilación de Vercel. En un esquema aislado se comprobó la migración con registros existentes, RLS forzado, consultas concurrentes de dos cuentas y 11 operaciones cruzadas rechazadas. En producción se probaron registro, contraseña incorrecta, login, logout y separación de tableros, incluyendo rechazo de URL y actualización de un proyecto ajeno; las dos cuentas temporales se eliminaron. Se conservaron los 17 proyectos, 48 ítems, 10 repositorios y una idea existentes, respetando las ediciones realizadas después del respaldo.
 
-Importa este proyecto en Vercel, instala con pnpm y usa `pnpm build`. Configura todas las variables de `.env.example` en Vercel, ejecuta la migración y el seed contra la base de producción desde un entorno seguro, y configura el callback de GitHub con tu dominio. No hace falta publicar el proyecto para desarrollarlo localmente.
-
-El token fine-grained de GitHub debe tener acceso explícito a los repositorios seleccionados y permisos de lectura de Metadata, Contents, Issues y Pull requests. El token permanece en el servidor. `CRON_SECRET` debe ser aleatorio y distinto de `AUTH_SECRET`. El endpoint `/api/cron/refresh-repos` exige `Authorization: Bearer <CRON_SECRET>`. El cron de `vercel.json` corre diariamente a partir de las 09:00 UTC, compatible con el plan Hobby de la cuenta. Para refrescar cada tres horas, cambia a `0 */3 * * *` en un plan que lo permita o usa un programador externo autenticado.
-
-La caché guarda ETags por consulta, último commit, conteos y errores. El refresco se detiene al detectar menos de 50 peticiones restantes. Un error de un repo no interrumpe el resto. El indicador de inactividad usa el commit más reciente de los repos del proyecto y aparece después de 14 días, solo en desarrollo o ejecución.
-
-## Navegación
-
-Selecciona segmentos para filtrar; el filtro queda en `?etapa=...`. Abre una tarjeta para editar su ficha en `/p/id`. Arrastra por el asa de cada tarjeta o usa el teclado sobre ella (Espacio, flechas, Espacio); el selector de etapa de la ficha también permite mover proyectos. Las listas tienen asas independientes para reordenar. Los textos se guardan al salir del campo. La tecla `i` enfoca la captura de ideas. El tema manual se conserva en una cookie y la opción sistema sigue al dispositivo.
-
-La eliminación definitiva se habilita solo en proyectos archivados y requiere confirmación. Revisa `DECISIONS.md` para las decisiones y límites de esta implementación.
-
-## Verificación de esta entrega
-
-El 3 de noviembre de 2026 pasaron ESLint, TypeScript, la compilación de producción y 17 pruebas unitarias. Se verificó por HTTP que `/` y `/p/farotrust` redirigen al login sin sesión, que el formulario de acceso responde 200 y que el cron devuelve 401 sin autorización. La migración fue generada, pero no aplicada a una base real. No se ejecutaron los e2e autenticados ni una revisión visual en navegador; faltan PostgreSQL y credenciales OAuth/GitHub. No se realizó un despliegue en Vercel.
+El respaldo previo y los informes de verificación están en `.vercel/`, excluidos de Git. Los cambios todavía no están guardados en un commit.

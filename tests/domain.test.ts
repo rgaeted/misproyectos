@@ -2,13 +2,13 @@ import { describe, it, expect } from "vitest";
 import { staleDays, stages } from "../lib/stages";
 import { githubUrl, command } from "../lib/validation";
 import seed from "../data/seed.json";
-import { isAllowedLogin } from "../lib/access";
-describe("acceso de una sola cuenta", () => {
-  it("rechaza cualquier otra cuenta y configuraciones vacías", () => {
-    expect(isAllowedLogin("intruso", "rgaeted")).toBe(false);
-    expect(isAllowedLogin("rgaeted", undefined)).toBe(false);
-    expect(isAllowedLogin(undefined, "rgaeted")).toBe(false);
-    expect(isAllowedLogin("Rgaeted", "rgaeted")).toBe(true);
+import { isUserId } from "../lib/access";
+describe("identidad de usuario", () => {
+  it("rechaza sesiones antiguas y acepta identificadores internos válidos", () => {
+    expect(isUserId(undefined)).toBe(false);
+    expect(isUserId("rgaeted")).toBe(false);
+    expect(isUserId("289845187")).toBe(false);
+    expect(isUserId("03555b19-5081-42fe-b8e1-ec266f314487")).toBe(true);
   });
 });
 describe("actividad de proyectos", () => {

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { stages } from "./stages";
+import { stepStates } from "./steps";
 export const shortText = z
   .string()
   .trim()
@@ -33,7 +34,6 @@ export const projectPatch = z
     type: z.string().trim().max(120).optional(),
     stage: z.enum(stages).nullable().optional(),
     lastUpdate: z.string().max(2000).optional(),
-    nextStep: z.string().max(2000).optional(),
     noRepoNote: z.string().max(2000).nullable().optional(),
     externalUrl: z
       .union([
@@ -49,6 +49,17 @@ export const projectPatch = z
   })
   .strict();
 export const command = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("addStep"), projectId: z.string().min(1).max(160), text: content,
+    state: z.enum(stepStates).default("todo"),
+    waitingOn: z.string().trim().max(500).default(""),
+  }).refine((value) => value.state === "waiting" || !value.waitingOn, { message: "Solo los pasos en espera pueden indicar qué falta." }),
+  z.object({
+    op: z.literal("editStep"), id: z.uuid(), text: content.optional(),
+    state: z.enum(stepStates).optional(), waitingOn: z.string().trim().max(500).optional(),
+  }).refine((value) => value.text !== undefined || value.state !== undefined || value.waitingOn !== undefined, { message: "Indica qué quieres cambiar." }),
+  z.object({ op: z.literal("removeStep"), id: z.uuid() }),
+  z.object({ op: z.literal("reorderSteps"), projectId: z.string().min(1).max(160), ids: z.array(z.uuid()).max(500) }),
   z.object({ op: z.literal("create"), name: shortText }),
   z.object({
     op: z.literal("update"),

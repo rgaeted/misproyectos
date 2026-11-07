@@ -1,7 +1,4 @@
-export function isAllowedLogin(login: unknown, allowed: string | undefined) {
-  return (
-    typeof login === "string" &&
-    Boolean(allowed) &&
-    login.toLowerCase() === allowed?.toLowerCase()
-  );
+import { z } from "zod";
+export function isUserId(value: unknown): value is string {
+  return z.uuid().safeParse(value).success;
 }

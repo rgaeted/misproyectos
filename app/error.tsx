@@ -4,8 +4,7 @@ export default function ErrorPage({ reset }: { reset: () => void }) {
     <main className="setup">
       <h1>No pudimos cargar tus proyectos</h1>
       <p>
-        Revisa la conexión a PostgreSQL y la configuración de la aplicación.
-        Luego vuelve a intentarlo.
+        No pudimos completar la carga. Vuelve a intentarlo en unos segundos.
       </p>
       <button onClick={reset}>Intentar de nuevo</button>
     </main>

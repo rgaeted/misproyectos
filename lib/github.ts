@@ -2,7 +2,7 @@ import "server-only";
 import { Octokit } from "@octokit/rest";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { database } from "./db";
+import { withUserDatabase } from "./db";
 import { repoSnapshots } from "./db/schema";
 class LowQuota extends Error {}
 const repoSchema = z.object({
@@ -20,18 +20,17 @@ const commitsSchema = z.array(
 const issuesSchema = z.array(
   z.object({ pull_request: z.object({}).optional() }),
 );
-export async function refreshRepos(repos: { owner: string; name: string }[]) {
-  if (!process.env.GITHUB_TOKEN) throw new Error("missing_token");
-  const api = new Octokit({ auth: process.env.GITHUB_TOKEN });
-  const db = database();
+export async function refreshRepos(repos: { owner: string; name: string }[], userId: string, token: string) {
+  if (!token) throw new Error("missing_token");
+  const api = new Octokit({ auth: token });
   for (const repo of Array.from(
     new Map(repos.map((r) => [`${r.owner}/${r.name}`, r])).values(),
   )) {
     const { owner, name } = repo;
-    const [old] = await db
+    const [old] = await withUserDatabase(userId, (db) => db
       .select()
       .from(repoSnapshots)
-      .where(and(eq(repoSnapshots.owner, owner), eq(repoSnapshots.name, name)));
+      .where(and(eq(repoSnapshots.userId, userId), eq(repoSnapshots.owner, owner), eq(repoSnapshots.name, name))));
     const previousCache = old?.etagCache ?? {};
     const cache: Record<string, { etag: string; data: unknown }> = {};
     const request = async (
@@ -114,6 +113,7 @@ export async function refreshRepos(repos: { owner: string; name: string }[]) {
         if (issues.length < 100) break;
       }
       const values = {
+        userId,
         owner,
         name,
         defaultBranch: metadata.default_branch,
@@ -127,17 +127,18 @@ export async function refreshRepos(repos: { owner: string; name: string }[]) {
         error: null,
         etagCache: cache,
       };
-      await db
+      await withUserDatabase(userId, (db) => db
         .insert(repoSnapshots)
         .values(values)
         .onConflictDoUpdate({
-          target: [repoSnapshots.owner, repoSnapshots.name],
+          target: [repoSnapshots.userId, repoSnapshots.owner, repoSnapshots.name],
           set: values,
-        });
+        }));
     } catch (error) {
       if (error instanceof LowQuota) break;
       const status = (error as { status?: number }).status;
       const values = {
+        userId,
         owner,
         name,
         error:
@@ -149,13 +150,13 @@ export async function refreshRepos(repos: { owner: string; name: string }[]) {
         fetchedAt: new Date(),
         etagCache: cache,
       };
-      await db
+      await withUserDatabase(userId, (db) => db
         .insert(repoSnapshots)
         .values(values)
         .onConflictDoUpdate({
-          target: [repoSnapshots.owner, repoSnapshots.name],
+          target: [repoSnapshots.userId, repoSnapshots.owner, repoSnapshots.name],
           set: values,
-        });
+        }));
     }
   }
 }

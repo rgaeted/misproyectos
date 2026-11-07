@@ -1,13 +1,15 @@
 import { getBoard } from "@/lib/data";
 import { Workspace } from "@/components/Workspace";
 import { notFound } from "next/navigation";
+import { requireUser } from "@/lib/session";
 export default async function ProjectPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const data = await getBoard();
+  const user = await requireUser();
+  const data = await getBoard(user.id!);
   if (!data.projects.some((p) => p.id === id)) notFound();
-  return <Workspace initial={data} selectedId={id} />;
+  return <Workspace initial={data} selectedId={id} viewerName={user.name || "Mi cuenta"} />;
 }

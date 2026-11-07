@@ -1,23 +1,60 @@
 import "server-only";
-import { asc } from "drizzle-orm";
-import { database } from "./db";
+import { unstable_cache } from "next/cache";
+import { asc, eq, getTableColumns } from "drizzle-orm";
+import { withUserDatabase } from "./db";
+import { isUserId } from "./access";
+import { boardTag } from "./board-cache";
 import {
   projects,
   projectItems,
+  projectSteps,
   projectRepos,
   repoSnapshots,
   inbox,
 } from "./db/schema";
-export async function getBoard() {
-  const db = database();
-  const [p, i, r, s, b] = await Promise.all([
-    db
+function cachedBoard(userId: string) {
+  return unstable_cache(() => readBoard(userId), ["misproyectos-board-v3", userId], {
+    revalidate: 30,
+    tags: [boardTag(userId)],
+  })();
+}
+export async function getBoard(userId: string) {
+  if (!isUserId(userId)) throw new Error("invalid_user");
+  const started = performance.now();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      cachedBoard(userId),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error("La carga del tablero excedió 15 segundos.")),
+          15_000,
+        );
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+    console.info("board_load", {
+      durationMs: Math.round(performance.now() - started),
+    });
+  }
+}
+async function readBoard(userId: string) {
+  const started = performance.now();
+  console.info("board_database_start");
+  return withUserDatabase(userId, async (db) => {
+  const p = await db
       .select()
       .from(projects)
-      .orderBy(asc(projects.sortOrder), asc(projects.createdAt)),
-    db.select().from(projectItems).orderBy(asc(projectItems.position)),
-    db.select().from(projectRepos),
-    db
+      .where(eq(projects.userId, userId))
+      .orderBy(asc(projects.sortOrder), asc(projects.createdAt));
+  const i = await db.select(getTableColumns(projectItems)).from(projectItems)
+      .innerJoin(projects, eq(projectItems.projectId, projects.id))
+      .where(eq(projects.userId, userId)).orderBy(asc(projectItems.position));
+  const r = await db.select(getTableColumns(projectRepos)).from(projectRepos)
+      .innerJoin(projects, eq(projectRepos.projectId, projects.id))
+      .where(eq(projects.userId, userId));
+  const s = await db
       .select({
         owner: repoSnapshots.owner,
         name: repoSnapshots.name,
@@ -29,13 +66,19 @@ export async function getBoard() {
         fetchedAt: repoSnapshots.fetchedAt,
         error: repoSnapshots.error,
       })
-      .from(repoSnapshots),
-    db.select().from(inbox).orderBy(asc(inbox.createdAt)),
-  ]);
+      .from(repoSnapshots).where(eq(repoSnapshots.userId, userId));
+  const b = await db.select().from(inbox).where(eq(inbox.userId, userId)).orderBy(asc(inbox.createdAt));
+  const steps = await db.select(getTableColumns(projectSteps)).from(projectSteps)
+    .innerJoin(projects, eq(projectSteps.projectId, projects.id))
+    .where(eq(projects.userId, userId)).orderBy(asc(projectSteps.position), asc(projectSteps.createdAt), asc(projectSteps.id));
+  console.info("board_database_complete", {
+    durationMs: Math.round(performance.now() - started),
+  });
   return JSON.parse(
     JSON.stringify({
       projects: p.map((project) => ({
         ...project,
+        steps: steps.filter((step) => step.projectId === project.id),
         items: i.filter((item) => item.projectId === project.id),
         repos: r
           .filter((repo) => repo.projectId === project.id)
@@ -50,6 +93,7 @@ export async function getBoard() {
       inbox: b,
     }),
   ) as BoardData;
+  });
 }
 export type Item = {
   id: string;
@@ -57,6 +101,14 @@ export type Item = {
   kind: "status" | "idea" | "question";
   text: string;
   done: boolean;
+  position: number;
+};
+export type Step = {
+  id: string;
+  projectId: string;
+  text: string;
+  state: import("./steps").StepState;
+  waitingOn: string;
   position: number;
 };
 export type Snapshot = {
@@ -85,6 +137,7 @@ export type Project = {
   externalUrl: string | null;
   archived: boolean;
   items: Item[];
+  steps: Step[];
   repos: Repo[];
 };
 export type BoardData = {

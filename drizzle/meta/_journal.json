@@ -8,6 +8,34 @@
       "when": 1793740422257,
       "tag": "0000_flawless_guardian",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793745961750,
+      "tag": "0001_enable_server_only_rls",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793824425255,
+      "tag": "0002_multiuser_accounts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793824461305,
+      "tag": "0003_private_user_policies",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793834980030,
+      "tag": "0004_project_steps",
+      "breakpoints": true
     }
   ]
 }

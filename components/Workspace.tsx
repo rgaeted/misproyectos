@@ -18,6 +18,8 @@ import type { BoardData, Project } from "@/lib/data";
 import { stages, labels, colors, staleDays, type Stage } from "@/lib/stages";
 import { mutate } from "@/lib/actions";
 import type { CommandInput } from "@/lib/validation";
+import { logout } from "@/lib/auth-actions";
+import { stepLabels, stepSummary } from "@/lib/steps";
 import { ProjectPanel } from "./ProjectPanel";
 import { dragAccessibility } from "@/lib/drag-accessibility";
 
@@ -47,9 +49,11 @@ const boardKeyboardCoordinates: KeyboardCoordinateGetter = (
 export function Workspace({
   initial,
   selectedId,
+  viewerName,
 }: {
   initial: BoardData;
   selectedId?: string;
+  viewerName?: string;
 }) {
   const router = useRouter();
   const search = useSearchParams();
@@ -93,7 +97,6 @@ export function Workspace({
           return { ok: false };
         }
         setMessage("Guardado");
-        router.refresh();
         return result;
       } catch {
         setError("No hay conexión. Inténtalo de nuevo.");
@@ -102,7 +105,7 @@ export function Workspace({
         setPending((n) => n - 1);
       }
     },
-    [router],
+    [],
   );
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -163,7 +166,7 @@ export function Workspace({
           Tu espacio de trabajo
         </Link>
         <div className="top-actions">
-          <span className="owner">Ricardo · Puerto Varas</span>
+          <span className="owner">{viewerName || "Mi cuenta"}</span>
           <button
             className="icon-button"
             aria-label={`Cambiar tema: ${theme}`}
@@ -183,9 +186,7 @@ export function Workspace({
           >
             {theme === "dark" ? "☾" : theme === "light" ? "☀" : "◐"}
           </button>
-          <Link className="quiet" href="/api/auth/signout" prefetch={false}>
-            Salir
-          </Link>
+          <form action={logout}><button className="quiet">Salir</button></form>
         </div>
       </header>
       <main className="workspace">
@@ -477,6 +478,7 @@ function Column({
   );
 }
 function Card({ project: p, open }: { project: Project; open: () => void }) {
+  const steps = stepSummary(p.steps);
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: p.id, data: { stage: p.stage ?? "sin_etapa" } });
   const quiet = staleDays(
@@ -506,8 +508,16 @@ function Card({ project: p, open }: { project: Project; open: () => void }) {
       </div>
       <button className="card-link" onClick={open}>
         <h3>{p.name}</h3>
-        <p>{p.nextStep || "Agrega el próximo paso"}</p>
+        {steps.pending.length ? <span className="card-steps">
+          {steps.pending.slice(0, 2).map((step) => <span className="card-step" key={step.id}>
+            <span className={`step-badge ${step.state}`}>{stepLabels[step.state]}</span>
+            <span className="card-step-text">{step.text}</span>
+            {step.state === "waiting" && step.waitingOn && <span className="card-step-note">Espera: {step.waitingOn}</span>}
+          </span>)}
+          {steps.pending.length > 2 && <span className="more-steps">+{steps.pending.length - 2} pasos pendientes</span>}
+        </span> : <p>{p.steps.length ? "Todos los pasos completados" : "Agrega los próximos pasos"}</p>}
       </button>
+      {!!p.steps.length && <div className="card-step-counts"><span className={steps.todo > 0 ? "work-count" : undefined}>{steps.todo} por trabajar</span><span>{steps.waiting} en espera</span>{!!steps.done && <span>{steps.done} completados</span>}</div>}
       <div className="card-meta">
         <span title="Preguntas abiertas">
           ○ {p.items.filter((i) => i.kind === "question" && !i.done).length}

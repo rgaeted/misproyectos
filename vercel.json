@@ -1,1 +1,4 @@
-{ "crons": [{ "path": "/api/cron/refresh-repos", "schedule": "0 9 * * *" }] }
+{
+  "regions": ["gru1"],
+  "crons": [{ "path": "/api/cron/refresh-repos", "schedule": "0 9 * * *" }]
+}

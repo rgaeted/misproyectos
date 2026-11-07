@@ -1,0 +1,10 @@
+CREATE POLICY "inbox_private" ON "inbox" AS PERMISSIVE FOR ALL TO public USING ("inbox"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid) WITH CHECK ("inbox"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid);--> statement-breakpoint
+CREATE POLICY "project_items_private" ON "project_items" AS PERMISSIVE FOR ALL TO public USING (exists (select 1 from "projects" where "projects"."id" = "project_items"."project_id" and "projects"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid)) WITH CHECK (exists (select 1 from "projects" where "projects"."id" = "project_items"."project_id" and "projects"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid));--> statement-breakpoint
+CREATE POLICY "project_repos_private" ON "project_repos" AS PERMISSIVE FOR ALL TO public USING (exists (select 1 from "projects" where "projects"."id" = "project_repos"."project_id" and "projects"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid)) WITH CHECK (exists (select 1 from "projects" where "projects"."id" = "project_repos"."project_id" and "projects"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid));--> statement-breakpoint
+CREATE POLICY "projects_private" ON "projects" AS PERMISSIVE FOR ALL TO public USING ("projects"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid) WITH CHECK ("projects"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid);--> statement-breakpoint
+CREATE POLICY "repo_snapshots_private" ON "repo_snapshots" AS PERMISSIVE FOR ALL TO public USING ("repo_snapshots"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid) WITH CHECK ("repo_snapshots"."user_id" = nullif(current_setting('app.user_id', true), '')::uuid);--> statement-breakpoint
+ALTER TABLE "projects" FORCE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "project_items" FORCE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "project_repos" FORCE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "inbox" FORCE ROW LEVEL SECURITY;--> statement-breakpoint
+ALTER TABLE "repo_snapshots" FORCE ROW LEVEL SECURITY;

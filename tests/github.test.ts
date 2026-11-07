@@ -11,7 +11,7 @@ vi.mock("@octokit/rest", () => ({
   },
 }));
 vi.mock("../lib/db", () => ({
-  database: () => ({
+  withUserDatabase: async (_userId: string, work: (db: unknown) => Promise<unknown>) => work({
     select: () => ({ from: () => ({ where: mocks.read }) }),
     insert: () => ({
       values: (value: unknown) => ({
@@ -23,6 +23,7 @@ vi.mock("../lib/db", () => ({
   }),
 }));
 import { refreshRepos } from "../lib/github";
+const userId = "03555b19-5081-42fe-b8e1-ec266f314487";
 const repo = { owner: "ricardo", name: "proyecto" };
 beforeEach(() => {
   vi.clearAllMocks();
@@ -56,7 +57,7 @@ describe("caché de GitHub", () => {
             ])
           : response({ default_branch: "main", private: true }),
     );
-    await refreshRepos([repo, repo]);
+    await refreshRepos([repo, repo], userId, "test-token");
     expect(mocks.save).toHaveBeenCalledTimes(1);
     expect(mocks.save).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -84,7 +85,7 @@ describe("caché de GitHub", () => {
       if (route === "GET /repos/{owner}/{repo}") throw { status: 304 };
       return response([]);
     });
-    await refreshRepos([repo]);
+    await refreshRepos([repo], userId, "test-token");
     expect(mocks.request).toHaveBeenCalledWith(
       "GET /repos/{owner}/{repo}",
       expect.objectContaining({ headers: { "if-none-match": "old" } }),
@@ -95,7 +96,7 @@ describe("caché de GitHub", () => {
   });
   it("registra 404 y sigue con el siguiente repositorio", async () => {
     mocks.request.mockRejectedValue({ status: 404 });
-    await refreshRepos([repo, { ...repo, name: "otro" }]);
+    await refreshRepos([repo, { ...repo, name: "otro" }], userId, "test-token");
     expect(mocks.save).toHaveBeenCalledTimes(2);
     expect(mocks.save).toHaveBeenCalledWith(
       expect.objectContaining({ error: "not_found" }),
@@ -103,13 +104,13 @@ describe("caché de GitHub", () => {
   });
   it("se detiene si quedan menos de 50 peticiones sin marcar el repo como inaccesible", async () => {
     mocks.request.mockResolvedValue(response({}, "49"));
-    await refreshRepos([repo, { ...repo, name: "otro" }]);
+    await refreshRepos([repo, { ...repo, name: "otro" }], userId, "test-token");
     expect(mocks.request).toHaveBeenCalledTimes(1);
     expect(mocks.save).not.toHaveBeenCalled();
   });
   it("no consulta la API si falta el token", async () => {
     vi.stubEnv("GITHUB_TOKEN", "");
-    await expect(refreshRepos([repo])).rejects.toThrow("missing_token");
+    await expect(refreshRepos([repo], userId, "")).rejects.toThrow("missing_token");
     expect(mocks.request).not.toHaveBeenCalled();
   });
 });

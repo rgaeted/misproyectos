@@ -20,6 +20,7 @@ import type { Project, Item } from "@/lib/data";
 import { stages, labels, type Stage } from "@/lib/stages";
 import type { Run } from "./Workspace";
 import { dragAccessibility } from "@/lib/drag-accessibility";
+import { NextSteps } from "./NextSteps";
 export function ProjectPanel({
   project: p,
   types,
@@ -156,17 +157,7 @@ export function ProjectPanel({
               }
             />
           </section>
-          <section className="panel-section next-step">
-            <h3>Próximo paso</h3>
-            <Editable
-              multiline
-              value={p.nextStep}
-              label="Próximo paso"
-              save={(value) =>
-                run({ op: "update", id: p.id, patch: { nextStep: value } })
-              }
-            />
-          </section>
+          <NextSteps projectId={p.id} steps={p.steps} run={run} pending={pending} />
           {(["status", "idea", "question"] as const).map((kind) => (
             <EditableList
               key={kind}
