@@ -977,3 +977,15 @@ kbd {
   .payment-amount { text-align: left; }
   .payments input, .payments select { font-size: 16px; }
 }
+.payments-page { max-width: 880px; margin: 0 auto; padding: 24px 16px 48px; }
+.payments-page-header { display: grid; gap: 6px; margin-bottom: 20px; }
+.payments-page-header h1 { margin: 0; }
+.payments-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.payments-card { display: grid; gap: 4px; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); padding: 14px; min-width: 0; }
+.payments-card h2 { margin: 0; font-size: 13px; color: var(--muted); font-weight: 600; }
+.payments-card strong { font-size: 20px; }
+.payments-card.overdue { border-left: 3px solid var(--s-pausa); }
+.payments-group { margin-bottom: 24px; }
+.payments-group h2 { font-size: 15px; margin: 0 0 10px; }
+.payments-group .payment-row { grid-template-columns: 84px minmax(0, 1fr) auto; }
+@media (max-width: 600px) { .payments-group .payment-row { grid-template-columns: minmax(0, 1fr) auto; } .payments-group .payment-date { grid-column: 1 / -1; } }

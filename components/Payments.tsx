@@ -2,11 +2,9 @@
 import { useState } from "react";
 import type { Run } from "./Workspace";
 import {
-  addMonths, formatClp, formatUf, planKindLabels, planKinds, projectPayments, todayInChile, ufToClp,
+  addMonths, displayDate, formatClp, formatUf, planKindLabels, planKinds, projectPayments, todayInChile, ufToClp,
   type PaidPayment, type PaymentPlan, type PaymentRow, type PlanKind,
 } from "@/lib/payments";
-
-export const displayDate = (date: string) => `${date.slice(8, 10)}-${date.slice(5, 7)}-${date.slice(0, 4)}`;
 
 function planDetail(plan: PaymentPlan) {
   if (plan.kind === "once") return `el ${displayDate(plan.startDate)}`;

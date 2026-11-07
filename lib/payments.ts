@@ -108,6 +108,10 @@ export function paymentsOverview(projects: OverviewInput[], today: string) {
   };
 }
 
+export function displayDate(date: string): string {
+  return `${date.slice(8, 10)}-${date.slice(5, 7)}-${date.slice(0, 4)}`;
+}
+
 export function paidOnFor(dueDate: string, today: string): string {
   return dueDate < today ? dueDate : today;
 }

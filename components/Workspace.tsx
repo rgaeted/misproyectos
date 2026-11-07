@@ -250,6 +250,7 @@ export function Workspace({
             </span>
           </div>
           <div className="toolbar-actions">
+            <button onClick={() => router.push("/pagos")}>Pagos</button>
             {filter && (
               <button
                 onClick={() => router.push(archived ? "/?archivados=1" : "/")}
