@@ -1,8 +1,10 @@
 "use server";
 import { auth } from "@/auth";
 import { withUserDatabase } from "./db";
-import { projects, projectItems, projectRepos, projectSteps, inbox } from "./db/schema";
-import { and, eq } from "drizzle-orm";
+import { projects, projectItems, projectRepos, projectSteps, inbox, paymentPlans, payments } from "./db/schema";
+import { dueDateFor, paidOnFor, todayInChile } from "./payments";
+import { fetchUf, getUfToday } from "./uf";
+import { and, eq, getTableColumns } from "drizzle-orm";
 import { command } from "./validation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { refreshRepos } from "./github";
@@ -36,6 +38,26 @@ export async function mutate(
         return tx.select().from(projectRepos).where(eq(projectRepos.projectId, project.id));
       });
       await refreshRepos(repos, userId, token);
+    } else if (c.op === "markPaid") {
+      // La consulta de la UF es una llamada HTTP: se hace fuera de la transacción.
+      const plan = await withUserDatabase(userId, async (tx) => {
+        const [row] = await tx.select(getTableColumns(paymentPlans)).from(paymentPlans)
+          .innerJoin(projects, eq(paymentPlans.projectId, projects.id))
+          .where(and(eq(paymentPlans.id, c.planId), eq(projects.userId, userId)));
+        if (!row) throw new Error("missing_plan");
+        return row;
+      });
+      const dueDate = dueDateFor(plan, c.seq);
+      if (!dueDate) throw new Error("invalid_payment");
+      const today = todayInChile();
+      const paidOn = paidOnFor(dueDate, today);
+      const ufValue = paidOn === today ? await getUfToday() : await fetchUf(paidOn);
+      await withUserDatabase(userId, async (tx) => {
+        await tx.insert(payments).values({ planId: plan.id, seq: c.seq, dueDate, amountUf: plan.amountUf, paidOn, ufValue })
+          .onConflictDoNothing();
+        await tx.update(projects).set({ updatedAt: new Date() })
+          .where(and(eq(projects.id, plan.projectId), eq(projects.userId, userId)));
+      });
     } else
       await withUserDatabase(userId, async (tx) => {
         const ownedProject = async (id: string) => {
@@ -58,7 +80,56 @@ export async function mutate(
           if (!step) throw new Error("missing_step");
           return step;
         };
+        const ownedPlan = async (id: string) => {
+          const [pointer] = await tx.select({ projectId: paymentPlans.projectId }).from(paymentPlans).where(eq(paymentPlans.id, id));
+          if (!pointer) throw new Error("missing_plan");
+          await ownedProject(pointer.projectId);
+          const [plan] = await tx.select().from(paymentPlans).where(eq(paymentPlans.id, id));
+          if (!plan) throw new Error("missing_plan");
+          return plan;
+        };
         switch (c.op) {
+          case "addPlan": {
+            await ownedProject(c.projectId);
+            const rows = await tx.select({ position: paymentPlans.position }).from(paymentPlans).where(eq(paymentPlans.projectId, c.projectId));
+            if (rows.length >= 50) throw new Error("too_many_plans");
+            await tx.insert(paymentPlans).values({
+              projectId: c.projectId, concept: c.concept, kind: c.kind, amountUf: c.amountUf, startDate: c.startDate,
+              installments: c.kind === "installments" ? c.installments : null,
+              position: rows.reduce((max, row) => Math.max(max, row.position), -1) + 1,
+            });
+            await touch(c.projectId);
+            break;
+          }
+          case "editPlan": {
+            const plan = await ownedPlan(c.id);
+            if (c.installments !== undefined && plan.kind !== "installments") throw new Error("invalid_installments");
+            if (c.endDate !== undefined && plan.kind !== "monthly") throw new Error("invalid_end_date");
+            const startDate = c.startDate ?? plan.startDate;
+            if (c.endDate && c.endDate < startDate) throw new Error("invalid_end_date");
+            if (c.startDate && plan.endDate && plan.endDate < c.startDate) throw new Error("invalid_end_date");
+            await tx.update(paymentPlans).set({
+              ...(c.concept !== undefined ? { concept: c.concept } : {}),
+              ...(c.amountUf !== undefined ? { amountUf: c.amountUf } : {}),
+              ...(c.startDate !== undefined ? { startDate: c.startDate } : {}),
+              ...(c.installments !== undefined ? { installments: c.installments } : {}),
+              ...(c.endDate !== undefined ? { endDate: c.endDate } : {}),
+            }).where(eq(paymentPlans.id, plan.id));
+            await touch(plan.projectId);
+            break;
+          }
+          case "deletePlan": {
+            const plan = await ownedPlan(c.id);
+            await tx.delete(paymentPlans).where(eq(paymentPlans.id, plan.id));
+            await touch(plan.projectId);
+            break;
+          }
+          case "unmarkPaid": {
+            const plan = await ownedPlan(c.planId);
+            await tx.delete(payments).where(and(eq(payments.planId, plan.id), eq(payments.seq, c.seq)));
+            await touch(plan.projectId);
+            break;
+          }
           case "addStep": {
             await ownedProject(c.projectId);
             const rows = await tx.select({ position: projectSteps.position }).from(projectSteps).where(eq(projectSteps.projectId, c.projectId));

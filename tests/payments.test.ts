@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { command } from "../lib/validation";
 import {
   addMonths, dueDateFor, formatClp, formatUf, paidOnFor, paymentsOverview,
   planSchedule, projectPayments, todayInChile, ufToClp,
@@ -69,5 +70,34 @@ describe("pagos", () => {
     expect(formatUf(1234.5)).toBe("1.234,50 UF");
     expect(formatClp(342150.4)).toBe("$ 342.150");
     expect(ufToClp(9, 38016.67)).toBe(342150);
+  });
+});
+
+describe("validación de planes", () => {
+  const base = { op: "addPlan", projectId: "p", concept: " Implementación ", kind: "installments", amountUf: 10, startDate: "2026-01-10", installments: 3 };
+  it("acepta un plan de cuotas válido y recorta el concepto", () => {
+    expect(command.parse(base)).toMatchObject({ concept: "Implementación", amountUf: 10, installments: 3 });
+    expect(command.safeParse({ ...base, kind: "monthly", installments: undefined, amountUf: 9 }).success).toBe(true);
+    expect(command.safeParse({ ...base, kind: "once", installments: undefined, amountUf: 0.5 }).success).toBe(true);
+  });
+  it("rechaza montos, fechas y cuotas inválidos", () => {
+    expect(command.safeParse({ ...base, amountUf: 0 }).success).toBe(false);
+    expect(command.safeParse({ ...base, amountUf: 9.123 }).success).toBe(false);
+    expect(command.safeParse({ ...base, amountUf: 100001 }).success).toBe(false);
+    expect(command.safeParse({ ...base, startDate: "2026-02-30" }).success).toBe(false);
+    expect(command.safeParse({ ...base, installments: undefined }).success).toBe(false);
+    expect(command.safeParse({ ...base, installments: 1 }).success).toBe(false);
+    expect(command.safeParse({ ...base, kind: "monthly" }).success).toBe(false);
+  });
+  it("editPlan exige un cambio y acepta quitar el término", () => {
+    const id = "03555b19-5081-42fe-b8e1-ec266f314487";
+    expect(command.safeParse({ op: "editPlan", id }).success).toBe(false);
+    expect(command.safeParse({ op: "editPlan", id, endDate: null }).success).toBe(true);
+  });
+  it("markPaid rechaza un número de pago negativo", () => {
+    const planId = "03555b19-5081-42fe-b8e1-ec266f314487";
+    expect(command.safeParse({ op: "markPaid", planId, seq: -1 }).success).toBe(false);
+    expect(command.safeParse({ op: "markPaid", planId, seq: 0 }).success).toBe(true);
+    expect(command.safeParse({ op: "unmarkPaid", planId, seq: 2 }).success).toBe(true);
   });
 });
