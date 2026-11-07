@@ -36,4 +36,10 @@ describe("carga del tablero", () => {
     await expect(getBoard("03555b19-5081-42fe-b8e1-ec266f314487")).resolves.toEqual({ projects: [], inbox: [] });
     expect(vi.getTimerCount()).toBe(0);
   });
+
+  it("incluye planes y pagos en cada proyecto", async () => {
+    returnQueries(Promise.resolve([{ id: "p1", archived: false }]));
+    const board = await getBoard("03555b19-5081-42fe-b8e1-ec266f314487");
+    expect(board.projects[0]).toMatchObject({ id: "p1", plans: [], payments: [] });
+  });
 });

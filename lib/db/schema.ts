@@ -12,10 +12,13 @@ import {
   index,
   pgPolicy,
   pgSchema,
+  numeric,
+  date,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { stages } from "../stages";
 import { stepStates } from "../steps";
+import { planKinds } from "../payments";
 const currentUser = sql`nullif(current_setting('app.user_id', true), '')::uuid`;
 const customSchema = process.env.DATABASE_SCHEMA && process.env.DATABASE_SCHEMA !== "public"
   ? pgSchema(process.env.DATABASE_SCHEMA) : undefined;
@@ -24,6 +27,7 @@ const enumeration = customSchema?.enum || pgEnum;
 export const stageEnum = enumeration("stage", stages);
 export const kindEnum = enumeration("item_kind", ["status", "idea", "question"]);
 export const stepStateEnum = enumeration("step_state", stepStates);
+export const planKindEnum = enumeration("plan_kind", planKinds);
 export const users = table("users", {
   id: uuid().defaultRandom().primaryKey(),
   name: text().notNull(),
@@ -88,6 +92,43 @@ export const projectSteps = table("project_steps", {
     for: "all",
     using: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
     withCheck: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
+  }),
+]).enableRLS();
+export const paymentPlans = table("payment_plans", {
+  id: uuid().defaultRandom().primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  concept: text().notNull(),
+  kind: planKindEnum().notNull(),
+  amountUf: numeric("amount_uf", { precision: 10, scale: 2, mode: "number" }).notNull(),
+  startDate: date("start_date", { mode: "string" }).notNull(),
+  installments: integer(),
+  endDate: date("end_date", { mode: "string" }),
+  position: integer().notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  index("payment_plans_project_id_idx").on(t.projectId),
+  pgPolicy("payment_plans_private", {
+    for: "all",
+    using: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
+    withCheck: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
+  }),
+]).enableRLS();
+export const payments = table("payments", {
+  id: uuid().defaultRandom().primaryKey(),
+  planId: uuid("plan_id").notNull().references(() => paymentPlans.id, { onDelete: "cascade" }),
+  seq: integer().notNull(),
+  dueDate: date("due_date", { mode: "string" }).notNull(),
+  amountUf: numeric("amount_uf", { precision: 10, scale: 2, mode: "number" }).notNull(),
+  paidOn: date("paid_on", { mode: "string" }).notNull(),
+  ufValue: numeric("uf_value", { precision: 12, scale: 2, mode: "number" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  unique().on(t.planId, t.seq),
+  index("payments_plan_id_idx").on(t.planId),
+  pgPolicy("payments_private", {
+    for: "all",
+    using: sql`exists (select 1 from ${paymentPlans} join ${projects} on ${projects.id} = ${paymentPlans.projectId} where ${paymentPlans.id} = ${t.planId} and ${projects.userId} = ${currentUser})`,
+    withCheck: sql`exists (select 1 from ${paymentPlans} join ${projects} on ${projects.id} = ${paymentPlans.projectId} where ${paymentPlans.id} = ${t.planId} and ${projects.userId} = ${currentUser})`,
   }),
 ]).enableRLS();
 export const projectItems = table("project_items", {

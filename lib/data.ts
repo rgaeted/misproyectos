@@ -8,12 +8,14 @@ import {
   projects,
   projectItems,
   projectSteps,
+  paymentPlans,
+  payments,
   projectRepos,
   repoSnapshots,
   inbox,
 } from "./db/schema";
 function cachedBoard(userId: string) {
-  return unstable_cache(() => readBoard(userId), ["misproyectos-board-v3", userId], {
+  return unstable_cache(() => readBoard(userId), ["misproyectos-board-v4", userId], {
     revalidate: 30,
     tags: [boardTag(userId)],
   })();
@@ -71,6 +73,13 @@ async function readBoard(userId: string) {
   const steps = await db.select(getTableColumns(projectSteps)).from(projectSteps)
     .innerJoin(projects, eq(projectSteps.projectId, projects.id))
     .where(eq(projects.userId, userId)).orderBy(asc(projectSteps.position), asc(projectSteps.createdAt), asc(projectSteps.id));
+  const plans = await db.select(getTableColumns(paymentPlans)).from(paymentPlans)
+    .innerJoin(projects, eq(paymentPlans.projectId, projects.id))
+    .where(eq(projects.userId, userId)).orderBy(asc(paymentPlans.position), asc(paymentPlans.createdAt));
+  const paid = await db.select(getTableColumns(payments)).from(payments)
+    .innerJoin(paymentPlans, eq(payments.planId, paymentPlans.id))
+    .innerJoin(projects, eq(paymentPlans.projectId, projects.id))
+    .where(eq(projects.userId, userId)).orderBy(asc(payments.dueDate));
   console.info("board_database_complete", {
     durationMs: Math.round(performance.now() - started),
   });
@@ -79,6 +88,8 @@ async function readBoard(userId: string) {
       projects: p.map((project) => ({
         ...project,
         steps: steps.filter((step) => step.projectId === project.id),
+        plans: plans.filter((plan) => plan.projectId === project.id),
+        payments: paid.filter((payment) => plans.some((plan) => plan.id === payment.planId && plan.projectId === project.id)),
         items: i.filter((item) => item.projectId === project.id),
         repos: r
           .filter((repo) => repo.projectId === project.id)
@@ -138,6 +149,8 @@ export type Project = {
   archived: boolean;
   items: Item[];
   steps: Step[];
+  plans: import("./payments").PaymentPlan[];
+  payments: import("./payments").PaidPayment[];
   repos: Repo[];
 };
 export type BoardData = {
