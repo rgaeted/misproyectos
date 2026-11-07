@@ -21,18 +21,21 @@ import { stages, labels, type Stage } from "@/lib/stages";
 import type { Run } from "./Workspace";
 import { dragAccessibility } from "@/lib/drag-accessibility";
 import { NextSteps } from "./NextSteps";
+import { Payments } from "./Payments";
 export function ProjectPanel({
   project: p,
   types,
   run,
   close,
   pending,
+  ufToday,
 }: {
   project: Project;
   types: string[];
   run: Run;
   close: () => void;
   pending: boolean;
+  ufToday: number | null;
 }) {
   const panel = useRef<HTMLElement>(null);
   const [confirm, setConfirm] = useState(false);
@@ -158,6 +161,7 @@ export function ProjectPanel({
             />
           </section>
           <NextSteps projectId={p.id} steps={p.steps} run={run} pending={pending} />
+          <Payments projectId={p.id} plans={p.plans} payments={p.payments} ufToday={ufToday} run={run} pending={pending} />
           {(["status", "idea", "question"] as const).map((kind) => (
             <EditableList
               key={kind}

@@ -50,10 +50,12 @@ export function Workspace({
   initial,
   selectedId,
   viewerName,
+  ufToday,
 }: {
   initial: BoardData;
   selectedId?: string;
   viewerName?: string;
+  ufToday?: number | null;
 }) {
   const router = useRouter();
   const search = useSearchParams();
@@ -436,6 +438,7 @@ export function Workspace({
           run={run}
           close={() => router.push(boardUrl, { scroll: false })}
           pending={pending > 0}
+          ufToday={ufToday ?? null}
         />
       )}
     </>

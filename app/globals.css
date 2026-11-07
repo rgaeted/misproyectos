@@ -954,3 +954,26 @@ kbd {
     scroll-behavior: auto !important;
   }
 }
+
+/* Pagos */
+.payments h4 { margin: 18px 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.payments-summary { margin: 0 0 4px; font-size: 14px; }
+.payment-overdue-total, .payment-flag { color: var(--s-pausa); font-style: normal; font-weight: 600; }
+.payment-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.payment-row { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto auto; gap: 8px 12px; align-items: center; border: 1px solid var(--line); border-left: 3px solid var(--s-desarrollo); border-radius: 10px; background: var(--raised); padding: 10px 12px; font-size: 14px; }
+.payment-row.overdue { border-left-color: var(--s-pausa); }
+.payment-row.paid { border-left-color: var(--lago); }
+.payment-date { color: var(--muted); font-size: 13px; }
+.payment-amount { text-align: right; white-space: nowrap; }
+.payment-plan { border: 1px solid var(--line); border-radius: 10px; background: var(--raised); padding: 10px 12px; font-size: 14px; }
+.payment-line { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: space-between; align-items: center; }
+.payment-actions { display: flex; gap: 8px; }
+.payment-edit { display: grid; gap: 12px; margin-top: 12px; }
+.payment-edit form, .payment-end { display: grid; gap: 10px; }
+.payment-edit label, .payments .new-step-form select { display: grid; gap: 6px; font-size: 13px; }
+.payment-edit input, .payment-edit select, .payments .new-step-form select { min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--ink); font-size: 14px; }
+@media (max-width: 600px) {
+  .payment-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .payment-amount { text-align: left; }
+  .payments input, .payments select { font-size: 16px; }
+}
