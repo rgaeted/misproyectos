@@ -1,11 +1,11 @@
 "use server";
 import { auth } from "@/auth";
 import { withUserDatabase } from "./db";
-import { projects, projectItems, projectRepos, projectSteps, inbox, paymentPlans, payments } from "./db/schema";
+import { projects, projectItems, projectRepos, projectSteps, inbox, paymentPlans, payments, dayLists, dayListItems } from "./db/schema";
 import { dueDateFor, paidOnFor, todayInChile } from "./payments";
 import { completedAtFor } from "./steps";
 import { fetchUf, getUfToday } from "./uf";
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray } from "drizzle-orm";
 import { command } from "./validation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { refreshRepos } from "./github";
@@ -90,6 +90,42 @@ export async function mutate(
           return plan;
         };
         switch (c.op) {
+          case "confirmDayList": {
+            const stepIds = c.items.flatMap((item) => ("stepId" in item ? [item.stepId] : []));
+            const found = stepIds.length
+              ? await tx.select({ id: projectSteps.id, text: projectSteps.text }).from(projectSteps)
+                  .innerJoin(projects, eq(projectSteps.projectId, projects.id))
+                  .where(and(inArray(projectSteps.id, stepIds), eq(projects.userId, userId)))
+              : [];
+            const texts = new Map(found.map((row) => [row.id, row.text]));
+            if (stepIds.some((id) => !texts.has(id))) throw new Error("missing_step");
+            await tx.delete(dayListItems).where(eq(dayListItems.userId, userId));
+            if (c.items.length)
+              await tx.insert(dayListItems).values(c.items.map((item, position) =>
+                "stepId" in item
+                  ? { userId, stepId: item.stepId, text: texts.get(item.stepId)!, position }
+                  : { userId, text: item.text, position }));
+            await tx.insert(dayLists).values({ userId, confirmedAt: new Date() })
+              .onConflictDoUpdate({ target: dayLists.userId, set: { confirmedAt: new Date() } });
+            break;
+          }
+          case "toggleDayItem": {
+            const [item] = await tx.select().from(dayListItems)
+              .where(and(eq(dayListItems.id, c.id), eq(dayListItems.userId, userId)));
+            if (!item) throw new Error("missing_item");
+            if (item.stepId) {
+              const step = await ownedStep(item.stepId);
+              const state = c.done ? "done" : "todo";
+              await tx.update(projectSteps).set({
+                state, waitingOn: "", completedAt: completedAtFor(step.state, state, step.completedAt, new Date()),
+              }).where(eq(projectSteps.id, step.id));
+              await touch(step.projectId);
+            } else {
+              await tx.update(dayListItems).set({ done: c.done, doneAt: c.done ? new Date() : null })
+                .where(eq(dayListItems.id, item.id));
+            }
+            break;
+          }
           case "addPlan": {
             await ownedProject(c.projectId);
             const rows = await tx.select({ position: paymentPlans.position }).from(paymentPlans).where(eq(paymentPlans.projectId, c.projectId));

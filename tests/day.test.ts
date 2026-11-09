@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { command } from "../lib/validation";
 import { addDays, daySummary, draftForTomorrow } from "../lib/day";
 import type { DayList } from "../lib/day";
 import type { Project, Step } from "../lib/data";
@@ -77,5 +78,23 @@ describe("resumen y borrador del día", () => {
       "Cobrar Hotel · Mensualidad 9,00 UF (atrasado, venció 10-10-2026)",
       "Cobrar Hotel · Mensualidad 9,00 UF (vence 10-11-2026)",
     ]);
+  });
+});
+
+describe("validación del día", () => {
+  const id = "03555b19-5081-42fe-b8e1-ec266f314487";
+  it("confirmDayList acepta pasos y texto libre, y recorta", () => {
+    const parsed = command.parse({ op: "confirmDayList", items: [{ stepId: id }, { text: " Llamar " }] });
+    expect(parsed).toMatchObject({ items: [{ stepId: id }, { text: "Llamar" }] });
+    expect(command.safeParse({ op: "confirmDayList", items: [] }).success).toBe(true);
+  });
+  it("confirmDayList rechaza ítems vacíos, ids inválidos y más de 100", () => {
+    expect(command.safeParse({ op: "confirmDayList", items: [{ text: " " }] }).success).toBe(false);
+    expect(command.safeParse({ op: "confirmDayList", items: [{ stepId: "x" }] }).success).toBe(false);
+    expect(command.safeParse({ op: "confirmDayList", items: Array.from({ length: 101 }, () => ({ text: "a" })) }).success).toBe(false);
+  });
+  it("toggleDayItem exige done", () => {
+    expect(command.safeParse({ op: "toggleDayItem", id }).success).toBe(false);
+    expect(command.safeParse({ op: "toggleDayItem", id, done: true }).success).toBe(true);
   });
 });

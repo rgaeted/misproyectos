@@ -67,6 +67,11 @@ const installmentCount = z.number().int("Indica entre 2 y 120 cuotas.").min(2, "
 const seq = z.number().int().min(0).max(10000);
 export const command = z.discriminatedUnion("op", [
   z.object({
+    op: z.literal("confirmDayList"),
+    items: z.array(z.union([z.object({ stepId: z.uuid() }), z.object({ text: content })])).max(100, "Usa hasta 100 ítems."),
+  }),
+  z.object({ op: z.literal("toggleDayItem"), id: z.uuid(), done: z.boolean() }),
+  z.object({
     op: z.literal("addPlan"), projectId: z.string().min(1).max(160), concept: shortText,
     kind: z.enum(planKinds), amountUf, startDate: dateString, installments: installmentCount.optional(),
   }).superRefine((value, ctx) => {
