@@ -989,3 +989,23 @@ kbd {
 .payments-group h2 { font-size: 15px; margin: 0 0 10px; }
 .payments-group .payment-row { grid-template-columns: 84px minmax(0, 1fr) auto; }
 @media (max-width: 600px) { .payments-group .payment-row { grid-template-columns: minmax(0, 1fr) auto; } .payments-group .payment-date { grid-column: 1 / -1; } }
+
+/* Cerrar el día */
+.today-list { border: 1px solid var(--line); border-left: 3px solid var(--lago); border-radius: 10px; background: var(--raised); padding: 14px 16px; margin: 0 0 18px; }
+.today-list h2 { margin: 0 0 2px; font-size: 16px; }
+.today-list p { margin: 0 0 10px; font-size: 13px; }
+.today-items { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.today-items label { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.today-items input { margin-top: 3px; flex-shrink: 0; }
+.today-items li.done span { text-decoration: line-through; color: var(--muted); }
+.day-close { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
+.day-close h2 { margin: 0 0 10px; font-size: 16px; }
+.day-group h3 { margin: 12px 0 4px; font-size: 14px; }
+.day-group ul { margin: 0; padding-left: 20px; font-size: 14px; display: grid; gap: 3px; }
+.draft-list { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 8px; }
+.draft-list li { display: flex; gap: 12px; justify-content: space-between; align-items: center; border: 1px solid var(--line); border-radius: 10px; background: var(--raised); padding: 10px 12px; font-size: 14px; }
+.draft-list li span { min-width: 0; overflow-wrap: anywhere; }
+.day-extra { display: grid; gap: 6px; font-size: 13px; margin: 12px 0; }
+.day-extra select { min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--ink); font-size: 14px; }
+.day-error { color: var(--s-pausa); font-weight: 600; }
+@media (max-width: 600px) { .day-extra select, .day-close input { font-size: 16px; } }

@@ -21,6 +21,7 @@ import type { CommandInput } from "@/lib/validation";
 import { logout } from "@/lib/auth-actions";
 import { stepLabels, stepSummary } from "@/lib/steps";
 import { ProjectPanel } from "./ProjectPanel";
+import { TodayList } from "./TodayList";
 import { dragAccessibility } from "@/lib/drag-accessibility";
 
 export type Run = (
@@ -250,6 +251,7 @@ export function Workspace({
             </span>
           </div>
           <div className="toolbar-actions">
+            <button onClick={() => router.push("/cierre")}>Cerrar el día</button>
             <button onClick={() => router.push("/pagos")}>Pagos</button>
             {filter && (
               <button
@@ -265,6 +267,7 @@ export function Workspace({
             </button>
           </div>
         </div>
+        {!archived && <TodayList dayList={data.dayList} run={run} pending={pending > 0} />}
         <DndContext
           sensors={sensors}
           onDragEnd={drop}
