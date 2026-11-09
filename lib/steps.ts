@@ -5,6 +5,10 @@ export const stepLabels: Record<StepState, string> = {
   waiting: "En espera",
   done: "Completado",
 };
+export function completedAtFor(previous: StepState | null, next: StepState, current: Date | null, now: Date): Date | null {
+  if (next !== "done") return null;
+  return previous === "done" ? (current ?? now) : now;
+}
 export function stepSummary<T extends { state: StepState }>(steps: readonly T[]) {
   return {
     todo: steps.filter((step) => step.state === "todo").length,

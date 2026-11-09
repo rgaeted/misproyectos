@@ -10,12 +10,14 @@ import {
   projectSteps,
   paymentPlans,
   payments,
+  dayLists,
+  dayListItems,
   projectRepos,
   repoSnapshots,
   inbox,
 } from "./db/schema";
 function cachedBoard(userId: string) {
-  return unstable_cache(() => readBoard(userId), ["misproyectos-board-v4", userId], {
+  return unstable_cache(() => readBoard(userId), ["misproyectos-board-v5", userId], {
     revalidate: 30,
     tags: [boardTag(userId)],
   })();
@@ -80,6 +82,18 @@ async function readBoard(userId: string) {
     .innerJoin(paymentPlans, eq(payments.planId, paymentPlans.id))
     .innerJoin(projects, eq(paymentPlans.projectId, projects.id))
     .where(eq(projects.userId, userId)).orderBy(asc(payments.dueDate));
+  const [dl] = await db.select().from(dayLists).where(eq(dayLists.userId, userId));
+  const dItems = dl ? await db.select().from(dayListItems).where(eq(dayListItems.userId, userId)).orderBy(asc(dayListItems.position)) : [];
+  const dayList = dl ? {
+    confirmedAt: dl.confirmedAt,
+    items: dItems.map((item) => {
+      const step = item.stepId ? steps.find((s) => s.id === item.stepId) : undefined;
+      const project = step ? p.find((x) => x.id === step.projectId) : undefined;
+      return step && project
+        ? { id: item.id, stepId: step.id, projectId: project.id, projectName: project.name, text: step.text, done: step.state === "done", doneAt: step.completedAt }
+        : { id: item.id, stepId: null, projectId: null, projectName: null, text: item.text, done: item.done, doneAt: item.doneAt };
+    }),
+  } : null;
   console.info("board_database_complete", {
     durationMs: Math.round(performance.now() - started),
   });
@@ -102,6 +116,7 @@ async function readBoard(userId: string) {
           })),
       })),
       inbox: b,
+      dayList,
     }),
   ) as BoardData;
   });
@@ -120,6 +135,7 @@ export type Step = {
   text: string;
   state: import("./steps").StepState;
   waitingOn: string;
+  completedAt: string | null;
   position: number;
 };
 export type Snapshot = {
@@ -156,4 +172,5 @@ export type Project = {
 export type BoardData = {
   projects: Project[];
   inbox: { id: string; text: string; createdAt: string }[];
+  dayList: import("./day").DayList | null;
 };

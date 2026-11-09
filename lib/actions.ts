@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { withUserDatabase } from "./db";
 import { projects, projectItems, projectRepos, projectSteps, inbox, paymentPlans, payments } from "./db/schema";
 import { dueDateFor, paidOnFor, todayInChile } from "./payments";
+import { completedAtFor } from "./steps";
 import { fetchUf, getUfToday } from "./uf";
 import { and, eq, getTableColumns } from "drizzle-orm";
 import { command } from "./validation";
@@ -137,6 +138,7 @@ export async function mutate(
             await tx.insert(projectSteps).values({
               projectId: c.projectId, text: c.text, state: c.state,
               waitingOn: c.state === "waiting" ? c.waitingOn : "",
+              completedAt: completedAtFor(null, c.state, null, new Date()),
               position: rows.reduce((max, row) => Math.max(max, row.position), -1) + 1,
             });
             await touch(c.projectId);
@@ -150,6 +152,7 @@ export async function mutate(
               ...(c.text !== undefined ? { text: c.text } : {}),
               state,
               waitingOn: state === "waiting" ? c.waitingOn ?? step.waitingOn : "",
+              completedAt: completedAtFor(step.state, state, step.completedAt, new Date()),
             }).where(eq(projectSteps.id, step.id));
             await touch(step.projectId);
             break;

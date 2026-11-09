@@ -84,6 +84,7 @@ export const projectSteps = table("project_steps", {
   text: text().notNull(),
   state: stepStateEnum().notNull().default("todo"),
   waitingOn: text("waiting_on").notNull().default(""),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
   position: integer().notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [
@@ -93,6 +94,24 @@ export const projectSteps = table("project_steps", {
     using: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
     withCheck: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
   }),
+]).enableRLS();
+export const dayLists = table("day_lists", {
+  userId: uuid("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  pgPolicy("day_lists_private", { for: "all", using: sql`${t.userId} = ${currentUser}`, withCheck: sql`${t.userId} = ${currentUser}` }),
+]).enableRLS();
+export const dayListItems = table("day_list_items", {
+  id: uuid().defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  stepId: uuid("step_id").references(() => projectSteps.id, { onDelete: "set null" }),
+  text: text().notNull(),
+  done: boolean().notNull().default(false),
+  doneAt: timestamp("done_at", { withTimezone: true }),
+  position: integer().notNull(),
+}, (t) => [
+  index("day_list_items_user_id_idx").on(t.userId),
+  pgPolicy("day_list_items_private", { for: "all", using: sql`${t.userId} = ${currentUser}`, withCheck: sql`${t.userId} = ${currentUser}` }),
 ]).enableRLS();
 export const paymentPlans = table("payment_plans", {
   id: uuid().defaultRandom().primaryKey(),

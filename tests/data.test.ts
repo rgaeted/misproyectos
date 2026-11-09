@@ -33,7 +33,7 @@ describe("carga del tablero", () => {
   it("devuelve los datos y limpia el plazo cuando las consultas terminan", async () => {
     vi.useFakeTimers();
     returnQueries(Promise.resolve([]));
-    await expect(getBoard("03555b19-5081-42fe-b8e1-ec266f314487")).resolves.toEqual({ projects: [], inbox: [] });
+    await expect(getBoard("03555b19-5081-42fe-b8e1-ec266f314487")).resolves.toEqual({ projects: [], inbox: [], dayList: null });
     expect(vi.getTimerCount()).toBe(0);
   });
 

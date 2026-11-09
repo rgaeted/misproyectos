@@ -11,7 +11,7 @@ export type PaymentPlan = {
 };
 export type PaidPayment = {
   id: string; planId: string; seq: number; dueDate: string; amountUf: number;
-  paidOn: string; ufValue: number | null;
+  paidOn: string; ufValue: number | null; createdAt?: string;
 };
 export type ScheduleEntry = { planId: string; seq: number; dueDate: string; amountUf: number };
 export type PaymentRow = ScheduleEntry & {
