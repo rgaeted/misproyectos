@@ -23,6 +23,7 @@ import { logout } from "@/lib/auth-actions";
 import { stepLabels, stepSummary } from "@/lib/steps";
 import { ProjectPanel } from "./ProjectPanel";
 import { TodayList } from "./TodayList";
+import { RunningClock } from "./RunningClock";
 import { dragAccessibility } from "@/lib/drag-accessibility";
 
 export type Run = (
@@ -517,6 +518,12 @@ function Card({ project: p, open }: { project: Project; open: () => void }) {
           ⠿
         </button>
       </div>
+      {p.runningTimer && (
+        <div className="card-clock" aria-label="Reloj corriendo">
+          <span className="card-clock-dot" aria-hidden="true" />
+          <RunningClock startedAt={p.runningTimer.startedAt} />
+        </div>
+      )}
       <button className="card-link" onClick={open}>
         <h3>{p.name}</h3>
         {steps.pending.length ? <span className="card-steps">

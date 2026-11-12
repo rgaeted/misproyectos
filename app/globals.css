@@ -1013,6 +1013,9 @@ kbd {
 .time-clock { display: grid; gap: 12px; }
 .time-clock-main { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .running-clock { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.card-clock { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; max-width: 100%; font-size: 13px; color: var(--lago); }
+.card-clock .running-clock { font-size: 13px; font-weight: 600; }
+.card-clock-dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--lago); }
 .time-field { display: grid; gap: 6px; font-size: 13px; min-width: 0; }
 .time-field input, .time-field select, .time-new-task input { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--ink); font-size: 14px; }
 .time-new-task { display: flex; gap: 8px; flex-wrap: wrap; }
