@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildOverview,
   buildReport,
   changedInstant,
   chileLocalToIso,
@@ -242,5 +243,17 @@ describe("formatos", () => {
   });
   it("formatClock", () => {
     expect(formatClock(3_909_000)).toBe("01:05:09");
+  });
+});
+
+describe("buildOverview", () => {
+  it("agrupa por proyecto, omite los vacíos y ordena por tiempo", () => {
+    const a = { ...entry("2026-11-10T13:00:00.000Z", "2026-11-10T14:00:00.000Z", { taskText: "Diseño" }), projectId: "a" };
+    const b = { ...entry("2026-11-10T13:00:00.000Z", "2026-11-10T15:30:00.000Z", { taskText: "API" }), projectId: "b" };
+    const projects = [{ id: "a", name: "A", archived: false }, { id: "b", name: "B", archived: true }, { id: "c", name: "C", archived: false }];
+    const result = buildOverview(projects, [a, b], [], "2026-11-01", "2026-11-30", now);
+    expect(result.groups.map((g) => g.projectId)).toEqual(["b", "a"]);
+    expect(result.groups[0].tasks).toEqual([{ taskKey: "text:API", task: "API", minutes: 150 }]);
+    expect(result.totalMinutes).toBe(210);
   });
 });

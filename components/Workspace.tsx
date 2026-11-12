@@ -257,6 +257,7 @@ export function Workspace({
           <div className="toolbar-actions">
             <button onClick={() => router.push("/cierre")}>Cerrar el día</button>
             <button onClick={() => router.push("/pagos")}>Pagos</button>
+            <button onClick={() => router.push("/tiempo")}>Tiempo</button>
             {filter && (
               <button
                 onClick={() => router.push(archived ? "/?archivados=1" : "/")}

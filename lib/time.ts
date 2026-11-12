@@ -142,3 +142,25 @@ export function formatClock(ms: number): string {
 export function changedInstant(value: string, initial: string): string | undefined {
   return value === initial ? undefined : chileLocalToIso(value);
 }
+
+export type OverviewProject = { id: string; name: string; archived: boolean };
+export type OverviewGroup = { projectId: string; name: string; archived: boolean; tasks: ReportTaskRow[]; totalMinutes: number };
+
+// Resumen de todos los proyectos: reutiliza buildReport por proyecto, así los minutos cuadran con el informe PDF.
+export function buildOverview(
+  projects: OverviewProject[],
+  entries: TimeEntry[],
+  steps: { id: string; text: string }[],
+  from: string,
+  to: string,
+  now: Date,
+): { groups: OverviewGroup[]; totalMinutes: number } {
+  const groups: OverviewGroup[] = [];
+  for (const project of projects) {
+    const report = buildReport(entries.filter((e) => e.projectId === project.id), steps, from, to, now);
+    if (report.totalMinutes === 0) continue;
+    groups.push({ projectId: project.id, name: project.name, archived: project.archived, tasks: report.byTask, totalMinutes: report.totalMinutes });
+  }
+  groups.sort((a, b) => b.totalMinutes - a.totalMinutes);
+  return { groups, totalMinutes: groups.reduce((sum, g) => sum + g.totalMinutes, 0) };
+}

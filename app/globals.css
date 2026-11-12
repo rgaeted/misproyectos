@@ -1036,3 +1036,7 @@ kbd {
 .time-download.disabled { color: var(--muted); cursor: not-allowed; text-decoration: line-through; }
 .time-error { margin: 0; color: var(--s-pausa); font-size: 13px; font-weight: 600; }
 @media (max-width: 600px) { .time-field input, .time-field select, .time-new-task input { font-size: 16px; } }
+.time-periods { display: flex; flex-wrap: wrap; gap: 8px; }
+.time-periods a { border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px; font-size: 14px; text-decoration: none; color: inherit; }
+.time-periods a.active { background: var(--lago); border-color: var(--lago); color: #fff; }
+.payments-group .time-overview-row { grid-template-columns: minmax(0, 1fr) auto; }
