@@ -137,5 +137,20 @@ export const command = z.discriminatedUnion("op", [
   z.object({ op: z.literal("removeInbox"), id: z.uuid() }),
   z.object({ op: z.literal("convert"), id: z.uuid() }),
   z.object({ op: z.literal("refresh"), projectId: z.string().min(1).max(160) }),
+  z.object({ op: z.literal("startTimer"), projectId: z.string().min(1).max(160) }),
+  z.object({
+    op: z.literal("setTimerTask"), projectId: z.string().min(1).max(160),
+    stepId: z.uuid().optional(), text: content.optional(),
+  }).refine((value) => (value.stepId === undefined) !== (value.text === undefined), { message: "Elige un paso o escribe una tarea." }),
+  z.object({ op: z.literal("stopTimer"), projectId: z.string().min(1).max(160) }),
+  z.object({
+    op: z.literal("addTimeEntry"), projectId: z.string().min(1).max(160),
+    startedAt: z.iso.datetime(), endedAt: z.iso.datetime(), stepId: z.uuid().nullable().optional(),
+  }),
+  z.object({
+    op: z.literal("editTimeEntry"), id: z.uuid(),
+    startedAt: z.iso.datetime().optional(), endedAt: z.iso.datetime().optional(), stepId: z.uuid().nullable().optional(),
+  }).refine((value) => value.startedAt !== undefined || value.endedAt !== undefined || value.stepId !== undefined, { message: "Indica qué quieres cambiar." }),
+  z.object({ op: z.literal("removeTimeEntry"), id: z.uuid() }),
 ]);
 export type CommandInput = z.input<typeof command>;

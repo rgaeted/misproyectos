@@ -1,11 +1,12 @@
 "use server";
 import { auth } from "@/auth";
 import { withUserDatabase } from "./db";
-import { projects, projectItems, projectRepos, projectSteps, inbox, paymentPlans, payments, dayLists, dayListItems } from "./db/schema";
+import { projects, projectItems, projectRepos, projectSteps, inbox, paymentPlans, payments, dayLists, dayListItems, timeEntries } from "./db/schema";
 import { dueDateFor, paidOnFor, todayInChile } from "./payments";
-import { completedAtFor } from "./steps";
+import { completedAtFor, type StepState } from "./steps";
+import { stopActionFor, taskChangeFor, validEntryRange } from "./time";
 import { fetchUf, getUfToday } from "./uf";
-import { and, eq, getTableColumns, inArray } from "drizzle-orm";
+import { and, eq, getTableColumns, inArray, isNull } from "drizzle-orm";
 import { command } from "./validation";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { refreshRepos } from "./github";
@@ -89,7 +90,114 @@ export async function mutate(
           if (!plan) throw new Error("missing_plan");
           return plan;
         };
+        // Llamar después de ownedProject(projectId).
+        const insertStep = async (projectId: string, text: string, state: StepState, waitingOn: string) => {
+          const rows = await tx.select({ position: projectSteps.position }).from(projectSteps).where(eq(projectSteps.projectId, projectId));
+          if (rows.length >= 500) throw new Error("too_many_steps");
+          const [step] = await tx.insert(projectSteps).values({
+            projectId, text, state,
+            waitingOn: state === "waiting" ? waitingOn : "",
+            completedAt: completedAtFor(null, state, null, new Date()),
+            position: rows.reduce((max, row) => Math.max(max, row.position), -1) + 1,
+          }).returning({ id: projectSteps.id });
+          return step.id;
+        };
+        // Llamar después de ownedProject(projectId): el paso debe ser de ese proyecto.
+        const projectStep = async (projectId: string, id: string) => {
+          const [step] = await tx.select().from(projectSteps)
+            .where(and(eq(projectSteps.id, id), eq(projectSteps.projectId, projectId)));
+          if (!step) throw new Error("missing_step");
+          return step;
+        };
+        const ownedEntry = async (id: string) => {
+          const [pointer] = await tx.select({ projectId: timeEntries.projectId }).from(timeEntries).where(eq(timeEntries.id, id));
+          if (!pointer) throw new Error("missing_entry");
+          await ownedProject(pointer.projectId);
+          const [entry] = await tx.select().from(timeEntries).where(eq(timeEntries.id, id));
+          if (!entry) throw new Error("missing_entry");
+          return entry;
+        };
+        const runningEntry = async (projectId: string) => {
+          const [entry] = await tx.select().from(timeEntries)
+            .where(and(eq(timeEntries.projectId, projectId), isNull(timeEntries.endedAt)));
+          return entry ? { ...entry, startedAt: entry.startedAt.toISOString() } : undefined;
+        };
+        // Llamar después de ownedProject(projectId).
+        const stopRunning = async (projectId: string, now: Date) => {
+          const running = await runningEntry(projectId);
+          if (!running) return;
+          if (stopActionFor(running, now) === "close")
+            await tx.update(timeEntries).set({ endedAt: now }).where(eq(timeEntries.id, running.id));
+          else await tx.delete(timeEntries).where(eq(timeEntries.id, running.id));
+        };
         switch (c.op) {
+          case "startTimer": {
+            await ownedProject(c.projectId);
+            await tx.insert(timeEntries).values({ projectId: c.projectId, startedAt: new Date() }).onConflictDoNothing();
+            await touch(c.projectId);
+            break;
+          }
+          case "setTimerTask": {
+            await ownedProject(c.projectId);
+            const now = new Date();
+            const task = c.stepId !== undefined
+              ? await projectStep(c.projectId, c.stepId).then((step) => ({ stepId: step.id, taskText: step.text }))
+              : { stepId: await insertStep(c.projectId, c.text!, "todo", ""), taskText: c.text! };
+            const running = await runningEntry(c.projectId);
+            if (!running) {
+              await tx.insert(timeEntries).values({ projectId: c.projectId, startedAt: now, ...task });
+            } else {
+              const change = taskChangeFor(running, now);
+              if (change === "assign") {
+                await tx.update(timeEntries).set(task).where(eq(timeEntries.id, running.id));
+              } else {
+                if (change === "replace") await tx.delete(timeEntries).where(eq(timeEntries.id, running.id));
+                else await tx.update(timeEntries).set({ endedAt: now }).where(eq(timeEntries.id, running.id));
+                await tx.insert(timeEntries).values({ projectId: c.projectId, startedAt: now, ...task });
+              }
+            }
+            await touch(c.projectId);
+            break;
+          }
+          case "stopTimer": {
+            await ownedProject(c.projectId);
+            await stopRunning(c.projectId, new Date());
+            await touch(c.projectId);
+            break;
+          }
+          case "addTimeEntry": {
+            await ownedProject(c.projectId);
+            const startedAt = new Date(c.startedAt);
+            const endedAt = new Date(c.endedAt);
+            if (!validEntryRange(startedAt, endedAt, new Date())) throw new Error("invalid_range");
+            const task = c.stepId
+              ? await projectStep(c.projectId, c.stepId).then((step) => ({ stepId: step.id, taskText: step.text }))
+              : { stepId: null, taskText: "" };
+            await tx.insert(timeEntries).values({ projectId: c.projectId, startedAt, endedAt, ...task });
+            await touch(c.projectId);
+            break;
+          }
+          case "editTimeEntry": {
+            const entry = await ownedEntry(c.id);
+            if (entry.endedAt === null) throw new Error("running_entry");
+            const startedAt = c.startedAt !== undefined ? new Date(c.startedAt) : entry.startedAt;
+            const endedAt = c.endedAt !== undefined ? new Date(c.endedAt) : entry.endedAt;
+            if (!validEntryRange(startedAt, endedAt, new Date())) throw new Error("invalid_range");
+            const task = c.stepId === undefined
+              ? {}
+              : c.stepId === null
+                ? { stepId: null, taskText: "" }
+                : await projectStep(entry.projectId, c.stepId).then((step) => ({ stepId: step.id, taskText: step.text }));
+            await tx.update(timeEntries).set({ startedAt, endedAt, ...task }).where(eq(timeEntries.id, entry.id));
+            await touch(entry.projectId);
+            break;
+          }
+          case "removeTimeEntry": {
+            const entry = await ownedEntry(c.id);
+            await tx.delete(timeEntries).where(eq(timeEntries.id, entry.id));
+            await touch(entry.projectId);
+            break;
+          }
           case "confirmDayList": {
             const stepIds = c.items.flatMap((item) => ("stepId" in item ? [item.stepId] : []));
             const found = stepIds.length
@@ -169,14 +277,7 @@ export async function mutate(
           }
           case "addStep": {
             await ownedProject(c.projectId);
-            const rows = await tx.select({ position: projectSteps.position }).from(projectSteps).where(eq(projectSteps.projectId, c.projectId));
-            if (rows.length >= 500) throw new Error("too_many_steps");
-            await tx.insert(projectSteps).values({
-              projectId: c.projectId, text: c.text, state: c.state,
-              waitingOn: c.state === "waiting" ? c.waitingOn : "",
-              completedAt: completedAtFor(null, c.state, null, new Date()),
-              position: rows.reduce((max, row) => Math.max(max, row.position), -1) + 1,
-            });
+            await insertStep(c.projectId, c.text, c.state, c.waitingOn);
             await touch(c.projectId);
             break;
           }
@@ -216,6 +317,7 @@ export async function mutate(
           }
           case "update":
             await ownedProject(c.id);
+            if (c.patch.archived === true) await stopRunning(c.id, new Date());
             await tx
               .update(projects)
               .set({ ...c.patch, updatedAt: new Date() })

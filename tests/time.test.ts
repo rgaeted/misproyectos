@@ -13,6 +13,7 @@ import {
   weekStart,
 } from "../lib/time";
 import type { TimeEntry } from "../lib/time";
+import { command } from "../lib/validation";
 
 let counter = 0;
 function entry(startedAt: string, endedAt: string | null, task: Partial<Pick<TimeEntry, "stepId" | "taskText">> = {}): TimeEntry {
@@ -189,6 +190,32 @@ describe("buildReport", () => {
     expect(report.byTask.map((r) => r.task)).toEqual(["Árbol", "Zeta", "Sin tarea asignada"]);
     expect(report.byTask[2].taskKey).toBe("none");
     expect(report.byDay.map((r) => r.task)).toEqual(["Árbol", "Sin tarea asignada", "Zeta"]);
+  });
+});
+
+describe("comandos del reloj", () => {
+  const stepId = "3f1c2b8e-9a4d-4c6e-8b2a-1d5e7f9a0b3c";
+  const message = "Elige un paso o escribe una tarea.";
+  it("setTimerTask exige un paso o un texto, no ambos", () => {
+    const both = command.safeParse({ op: "setTimerTask", projectId: "p", stepId, text: "x" });
+    expect(both.success).toBe(false);
+    expect(both.error?.issues[0].message).toBe(message);
+    const neither = command.safeParse({ op: "setTimerTask", projectId: "p" });
+    expect(neither.success).toBe(false);
+    expect(neither.error?.issues[0].message).toBe(message);
+    expect(command.safeParse({ op: "setTimerTask", projectId: "p", stepId }).success).toBe(true);
+    expect(command.safeParse({ op: "setTimerTask", projectId: "p", text: "Diseño" }).success).toBe(true);
+  });
+  it("editTimeEntry sin campos falla", () => {
+    expect(command.safeParse({ op: "editTimeEntry", id: stepId }).success).toBe(false);
+    expect(command.safeParse({ op: "editTimeEntry", id: stepId, stepId: null }).success).toBe(true);
+  });
+  it("addTimeEntry exige instantes ISO", () => {
+    expect(command.safeParse({ op: "addTimeEntry", projectId: "p", startedAt: "ayer", endedAt: "2026-11-12T13:00:00Z" }).success).toBe(false);
+    expect(command.safeParse({ op: "addTimeEntry", projectId: "p", startedAt: "2026-11-12T12:00:00Z", endedAt: "2026-11-12T13:00:00Z" }).success).toBe(true);
+  });
+  it("startTimer válido pasa", () => {
+    expect(command.safeParse({ op: "startTimer", projectId: "p" }).success).toBe(true);
   });
 });
 
