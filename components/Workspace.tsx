@@ -18,6 +18,7 @@ import type { BoardData, Project } from "@/lib/data";
 import { stages, labels, colors, staleDays, type Stage } from "@/lib/stages";
 import { mutate } from "@/lib/actions";
 import type { CommandInput } from "@/lib/validation";
+import type { TimeEntry } from "@/lib/time";
 import { logout } from "@/lib/auth-actions";
 import { stepLabels, stepSummary } from "@/lib/steps";
 import { ProjectPanel } from "./ProjectPanel";
@@ -52,11 +53,13 @@ export function Workspace({
   selectedId,
   viewerName,
   ufToday,
+  timeEntries,
 }: {
   initial: BoardData;
   selectedId?: string;
   viewerName?: string;
   ufToday?: number | null;
+  timeEntries?: TimeEntry[];
 }) {
   const router = useRouter();
   const search = useSearchParams();
@@ -443,6 +446,7 @@ export function Workspace({
           close={() => router.push(boardUrl, { scroll: false })}
           pending={pending > 0}
           ufToday={ufToday ?? null}
+          timeEntries={timeEntries ?? []}
         />
       )}
     </>

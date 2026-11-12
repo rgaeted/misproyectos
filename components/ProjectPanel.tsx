@@ -22,6 +22,8 @@ import type { Run } from "./Workspace";
 import { dragAccessibility } from "@/lib/drag-accessibility";
 import { NextSteps } from "./NextSteps";
 import { Payments } from "./Payments";
+import { TimeTracker } from "./TimeTracker";
+import type { TimeEntry } from "@/lib/time";
 export function ProjectPanel({
   project: p,
   types,
@@ -29,7 +31,9 @@ export function ProjectPanel({
   close,
   pending,
   ufToday,
+  timeEntries,
 }: {
+  timeEntries: TimeEntry[];
   project: Project;
   types: string[];
   run: Run;
@@ -161,6 +165,7 @@ export function ProjectPanel({
             />
           </section>
           <NextSteps projectId={p.id} steps={p.steps} run={run} pending={pending} />
+          <TimeTracker project={p} entries={timeEntries} run={run} pending={pending} />
           <Payments projectId={p.id} plans={p.plans} payments={p.payments} ufToday={ufToday} run={run} pending={pending} />
           {(["status", "idea", "question"] as const).map((kind) => (
             <EditableList

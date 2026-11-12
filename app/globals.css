@@ -1009,3 +1009,27 @@ kbd {
 .day-extra select { min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--ink); font-size: 14px; }
 .day-error { color: var(--s-pausa); font-weight: 600; }
 @media (max-width: 600px) { .day-extra select, .day-close input { font-size: 16px; } }
+.time-tracker { min-width: 0; }
+.time-clock { display: grid; gap: 12px; }
+.time-clock-main { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.running-clock { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.time-field { display: grid; gap: 6px; font-size: 13px; min-width: 0; }
+.time-field input, .time-field select, .time-new-task input { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); color: var(--ink); font-size: 14px; }
+.time-new-task { display: flex; gap: 8px; flex-wrap: wrap; }
+.time-new-task input { flex: 1 1 160px; }
+.time-new-task button { flex-shrink: 0; }
+.time-totals { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 16px 0 0; font-size: 14px; }
+.time-subtitle { margin: 18px 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.time-entry { display: grid; gap: 6px; }
+.time-entry-main { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; font-size: 13px; }
+.time-entry-when { color: var(--muted); font-variant-numeric: tabular-nums; }
+.time-entry-task { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.time-entry-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.time-entry-form { display: grid; gap: 10px; }
+.time-add { margin-top: 12px; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; }
+.time-more { margin-top: 12px; }
+.time-report { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.time-download { display: inline-block; margin-top: 12px; font-size: 14px; font-weight: 600; }
+.time-download.disabled { color: var(--muted); cursor: not-allowed; text-decoration: line-through; }
+.time-error { margin: 0; color: var(--s-pausa); font-size: 13px; font-weight: 600; }
+@media (max-width: 600px) { .time-field input, .time-field select, .time-new-task input { font-size: 16px; } }
