@@ -9,7 +9,7 @@ const step = (id: string, projectId: string, state: Step["state"], overrides: Pa
 });
 const project = (overrides: Partial<Project> & { id: string }): Project => ({
   name: overrides.id.toUpperCase(), type: "", stage: null, lastUpdate: "", nextStep: "", noRepoNote: null,
-  externalUrl: null, archived: false, items: [], steps: [], plans: [], payments: [], repos: [], ...overrides,
+  externalUrl: null, archived: false, items: [], steps: [], plans: [], payments: [], repos: [], runningTimer: null, ...overrides,
 });
 const TODAY = "2026-11-09";
 

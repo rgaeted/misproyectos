@@ -50,6 +50,13 @@
       "when": 1794196907218,
       "tag": "0006_day_close",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794493477382,
+      "tag": "0007_time_entries",
+      "breakpoints": true
     }
   ]
 }

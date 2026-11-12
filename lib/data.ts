@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { asc, eq, getTableColumns } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, isNull } from "drizzle-orm";
 import { withUserDatabase } from "./db";
 import { isUserId } from "./access";
 import { boardTag } from "./board-cache";
@@ -15,9 +15,10 @@ import {
   projectRepos,
   repoSnapshots,
   inbox,
+  timeEntries,
 } from "./db/schema";
 function cachedBoard(userId: string) {
-  return unstable_cache(() => readBoard(userId), ["misproyectos-board-v5", userId], {
+  return unstable_cache(() => readBoard(userId), ["misproyectos-board-v6", userId], {
     revalidate: 30,
     tags: [boardTag(userId)],
   })();
@@ -82,6 +83,9 @@ async function readBoard(userId: string) {
     .innerJoin(paymentPlans, eq(payments.planId, paymentPlans.id))
     .innerJoin(projects, eq(paymentPlans.projectId, projects.id))
     .where(eq(projects.userId, userId)).orderBy(asc(payments.dueDate));
+  const running = await db.select(getTableColumns(timeEntries)).from(timeEntries)
+    .innerJoin(projects, eq(timeEntries.projectId, projects.id))
+    .where(and(eq(projects.userId, userId), isNull(timeEntries.endedAt)));
   const [dl] = await db.select().from(dayLists).where(eq(dayLists.userId, userId));
   const dItems = dl ? await db.select().from(dayListItems).where(eq(dayListItems.userId, userId)).orderBy(asc(dayListItems.position)) : [];
   const dayList = dl ? {
@@ -104,6 +108,7 @@ async function readBoard(userId: string) {
         steps: steps.filter((step) => step.projectId === project.id),
         plans: plans.filter((plan) => plan.projectId === project.id),
         payments: paid.filter((payment) => plans.some((plan) => plan.id === payment.planId && plan.projectId === project.id)),
+        runningTimer: running.find((entry) => entry.projectId === project.id) ?? null,
         items: i.filter((item) => item.projectId === project.id),
         repos: r
           .filter((repo) => repo.projectId === project.id)
@@ -168,6 +173,7 @@ export type Project = {
   plans: import("./payments").PaymentPlan[];
   payments: import("./payments").PaidPayment[];
   repos: Repo[];
+  runningTimer: import("./time").TimeEntry | null;
 };
 export type BoardData = {
   projects: Project[];

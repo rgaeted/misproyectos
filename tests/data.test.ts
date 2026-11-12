@@ -7,6 +7,7 @@ vi.mock("next/cache", () => ({
 vi.mock("../lib/db", () => ({ withUserDatabase: vi.fn() }));
 import { withUserDatabase } from "../lib/db";
 import { getBoard } from "../lib/data";
+import { projects, timeEntries } from "../lib/db/schema";
 
 function returnQueries(result: Promise<unknown[]>) {
   const query = Object.assign(result, { orderBy: () => result, where: () => query, innerJoin: () => query });
@@ -41,5 +42,24 @@ describe("carga del tablero", () => {
     returnQueries(Promise.resolve([{ id: "p1", archived: false }]));
     const board = await getBoard("03555b19-5081-42fe-b8e1-ec266f314487");
     expect(board.projects[0]).toMatchObject({ id: "p1", plans: [], payments: [] });
+  });
+
+  it("incluye el tramo corriendo de cada proyecto", async () => {
+    const rows = new Map<unknown, unknown[]>([
+      [projects, [{ id: "p1", archived: false }, { id: "p2", archived: false }]],
+      [timeEntries, [{ id: "t1", projectId: "p1", stepId: null, taskText: "Revisar", startedAt: new Date("2026-11-12T10:00:00Z"), endedAt: null }]],
+    ]);
+    vi.mocked(withUserDatabase).mockImplementation(async (_userId, work) => work({
+      select: () => ({
+        from: (table: unknown) => {
+          const result = Promise.resolve(rows.get(table) ?? []);
+          const query: unknown = Object.assign(result, { orderBy: () => result, where: () => query, innerJoin: () => query });
+          return query;
+        },
+      }),
+    } as never));
+    const board = await getBoard("03555b19-5081-42fe-b8e1-ec266f314487");
+    expect(board.projects[0].runningTimer).toMatchObject({ id: "t1", projectId: "p1", startedAt: "2026-11-12T10:00:00.000Z", endedAt: null });
+    expect(board.projects[1].runningTimer).toBeNull();
   });
 });

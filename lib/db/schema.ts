@@ -10,6 +10,7 @@ import {
   primaryKey,
   jsonb,
   index,
+  uniqueIndex,
   pgPolicy,
   pgSchema,
   numeric,
@@ -90,6 +91,23 @@ export const projectSteps = table("project_steps", {
 }, (t) => [
   index("project_steps_project_id_idx").on(t.projectId),
   pgPolicy("project_steps_private", {
+    for: "all",
+    using: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
+    withCheck: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
+  }),
+]).enableRLS();
+export const timeEntries = table("time_entries", {
+  id: uuid().defaultRandom().primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  stepId: uuid("step_id").references(() => projectSteps.id, { onDelete: "set null" }),
+  taskText: text("task_text").notNull().default(""),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  endedAt: timestamp("ended_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("time_entries_one_running").on(t.projectId).where(sql`ended_at is null`),
+  index("time_entries_project_started_idx").on(t.projectId, t.startedAt),
+  pgPolicy("time_entries_private", {
     for: "all",
     using: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
     withCheck: sql`exists (select 1 from ${projects} where ${projects.id} = ${t.projectId} and ${projects.userId} = ${currentUser})`,
