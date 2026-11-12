@@ -29,7 +29,7 @@
   - período vacío: "No hay tiempo registrado en este período.";
   - total del PDF: "Total: {duración} ({decimal})".
 - La tabla nueva lleva una política RLS como la de `project_steps` (el proyecto es del usuario actual) y `FORCE ROW LEVEL SECURITY`, igual que `drizzle/0006_day_close.sql`.
-- `pnpm` no está en el PATH: usa `npx vitest run`, `npx tsc --noEmit`, `npx eslint .`, `npx drizzle-kit` y `npx next build`. Para la dependencia, `npm install pdf-lib` está prohibido por el lockfile de pnpm: usa `npx pnpm add pdf-lib`.
+- `pnpm` no está en el PATH: usa `npx vitest run`, `npx tsc --noEmit`, `npx eslint .`, `npx drizzle-kit` y `npx next build`. El proyecto usa `pnpm-lock.yaml`: agrega la dependencia con `npx pnpm add pdf-lib`, no con `npm install`.
 - No ejecutes `db:migrate`: la migración se aplica a la base real y la corre Ricardo.
 
 ## Review Focus
