@@ -20,7 +20,7 @@ function plain(message: string, status: number) {
 function slugify(name: string): string {
   const slug = name
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");

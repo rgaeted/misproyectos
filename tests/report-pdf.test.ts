@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PDFDocument, StandardFonts } from "pdf-lib";
-import { pdfSafe, renderReportPdf } from "../lib/report-pdf";
+import { pdfSafe, renderReportPdf, totalLine } from "../lib/report-pdf";
 import type { Report, ReportDayRow } from "../lib/time";
 
 const base = { projectName: "Sitio de Ana", ownerName: "Ricardo", from: "2026-10-01", to: "2026-10-31" };
@@ -10,6 +10,12 @@ describe("pdfSafe", () => {
   it("quita los caracteres que la fuente no codifica y colapsa espacios", async () => {
     const helvetica = await (await PDFDocument.create()).embedFont(StandardFonts.Helvetica);
     expect(pdfSafe("Login 🚀 ñandú", helvetica)).toBe("Login ñandú");
+  });
+});
+
+describe("totalLine", () => {
+  it("muestra la duración y luego las horas decimales", () => {
+    expect(totalLine(750)).toBe("Total: 12 h 30 min (12,5 h)");
   });
 });
 

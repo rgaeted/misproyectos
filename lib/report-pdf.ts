@@ -148,6 +148,10 @@ class Writer {
   }
 }
 
+export function totalLine(minutes: number): string {
+  return `Total: ${formatDuration(minutes)} (${formatHoursDecimal(minutes)})`;
+}
+
 export async function renderReportPdf(input: {
   projectName: string;
   ownerName: string;
@@ -181,10 +185,10 @@ export async function renderReportPdf(input: {
       { title: "Tarea", width: CONTENT_WIDTH - hoursWidth - COLUMN_GAP, align: "left" },
       { title: "Horas", width: hoursWidth, align: "right" },
     ],
-    report.byTask.map((row) => [row.task, formatHoursDecimal(row.minutes)]),
+    report.byTask.map((row) => [row.task, formatDuration(row.minutes)]),
   );
   writer.y -= 8;
-  writer.text(`Total: ${formatHoursDecimal(report.totalMinutes)} (${formatDuration(report.totalMinutes)})`, { font: writer.bold, gap: 24 });
+  writer.text(totalLine(report.totalMinutes), { font: writer.bold, gap: 24 });
 
   const dateWidth = 70;
   writer.table(
@@ -194,7 +198,7 @@ export async function renderReportPdf(input: {
       { title: "Tarea", width: CONTENT_WIDTH - dateWidth - hoursWidth - COLUMN_GAP * 2, align: "left" },
       { title: "Horas", width: hoursWidth, align: "right" },
     ],
-    report.byDay.map((row) => [displayDate(row.date), row.task, formatHoursDecimal(row.minutes)]),
+    report.byDay.map((row) => [displayDate(row.date), row.task, formatDuration(row.minutes)]),
   );
 
   return doc.save();
