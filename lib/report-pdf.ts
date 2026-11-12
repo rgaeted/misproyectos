@@ -34,6 +34,11 @@ export function pdfSafe(text: string, font: PDFFont): string {
   return kept.replace(/ {2,}/g, " ").trim();
 }
 
+// Texto de una celda: si queda vacío tras quitar lo no imprimible, se indica en vez de dejarla en blanco.
+export function cellText(text: string, font: PDFFont): string {
+  return pdfSafe(text, font) || "(tarea sin texto)";
+}
+
 function wrapText(text: string, font: PDFFont, size: number, width: number): string[] {
   const fits = (value: string) => font.widthOfTextAtSize(value, size) <= width;
   const lines: string[] = [];
@@ -126,7 +131,7 @@ class Writer {
   }
 
   private bodyCells(columns: Column[], row: string[]) {
-    return columns.map((column, index) => wrapText(pdfSafe(row[index], this.regular), this.regular, BODY_SIZE, column.width));
+    return columns.map((column, index) => wrapText(cellText(row[index], this.regular), this.regular, BODY_SIZE, column.width));
   }
 
   table(title: string, columns: Column[], rows: string[][]) {

@@ -132,29 +132,29 @@ export async function mutate(
         };
         switch (c.op) {
           case "startTimer": {
-            await ownedProject(c.projectId);
+            const project = await ownedProject(c.projectId);
+            if (project.archived) throw new Error("archived");
             await tx.insert(timeEntries).values({ projectId: c.projectId, startedAt: new Date() }).onConflictDoNothing();
             await touch(c.projectId);
             break;
           }
           case "setTimerTask": {
-            await ownedProject(c.projectId);
+            const project = await ownedProject(c.projectId);
+            if (project.archived) throw new Error("archived");
+            // Sin reloj en marcha no se inicia uno: la UI ofrece "Iniciar" para eso.
+            const running = await runningEntry(c.projectId);
+            if (!running) throw new Error("not_running");
             const now = new Date();
             const task = c.stepId !== undefined
               ? await projectStep(c.projectId, c.stepId).then((step) => ({ stepId: step.id, taskText: step.text }))
               : { stepId: await insertStep(c.projectId, c.text!, "todo", ""), taskText: c.text! };
-            const running = await runningEntry(c.projectId);
-            if (!running) {
-              await tx.insert(timeEntries).values({ projectId: c.projectId, startedAt: now, ...task });
+            const change = taskChangeFor(running, now);
+            if (change === "assign") {
+              await tx.update(timeEntries).set(task).where(eq(timeEntries.id, running.id));
             } else {
-              const change = taskChangeFor(running, now);
-              if (change === "assign") {
-                await tx.update(timeEntries).set(task).where(eq(timeEntries.id, running.id));
-              } else {
-                if (change === "replace") await tx.delete(timeEntries).where(eq(timeEntries.id, running.id));
-                else await tx.update(timeEntries).set({ endedAt: now }).where(eq(timeEntries.id, running.id));
-                await tx.insert(timeEntries).values({ projectId: c.projectId, startedAt: now, ...task });
-              }
+              if (change === "replace") await tx.delete(timeEntries).where(eq(timeEntries.id, running.id));
+              else await tx.update(timeEntries).set({ endedAt: now }).where(eq(timeEntries.id, running.id));
+              await tx.insert(timeEntries).values({ projectId: c.projectId, startedAt: now, ...task });
             }
             await touch(c.projectId);
             break;

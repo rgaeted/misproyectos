@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildReport,
+  changedInstant,
   chileLocalToIso,
   formatClock,
   formatDuration,
@@ -36,6 +37,13 @@ describe("startOfChileDay", () => {
   it("resuelve el día del cambio de hora de abril", () => {
     expect(startOfChileDay("2026-04-05").toISOString()).toBe("2026-04-05T04:00:00.000Z");
     expect(startOfChileDay("2026-04-04").toISOString()).toBe("2026-04-04T03:00:00.000Z");
+  });
+});
+
+describe("changedInstant", () => {
+  it("devuelve undefined si el campo local no cambió y el instante si cambió", () => {
+    expect(changedInstant("2026-11-12T09:30", "2026-11-12T09:30")).toBeUndefined();
+    expect(changedInstant("2026-11-12T09:45", "2026-11-12T09:30")).toBe("2026-11-12T12:45:00.000Z");
   });
 });
 

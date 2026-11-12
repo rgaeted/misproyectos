@@ -178,7 +178,7 @@ Comportamiento en el servidor, dentro de la transacción. Todas las operaciones 
 - **`setTimerTask`:**
   - Con `text`, crea el paso "Por trabajar" al final, con la misma lógica de `addStep`. Extrae esa lógica a un helper local `insertStep(projectId, text, state, waitingOn)` que devuelve el id, y úsalo en ambos lugares.
   - Con `stepId`, el paso debe ser del mismo proyecto; si no, lanza `missing_step`.
-  - Si no hay tramo corriendo, inicia uno con esa tarea.
+  - Si no hay tramo corriendo, falla con `not_running` (la UI ofrece "Iniciar"); en un proyecto archivado falla con `archived`.
   - Si hay uno, según `taskChangeFor`:
     - `assign` actualiza el tramo;
     - `replace` borra el tramo e inserta uno nuevo desde `now`;

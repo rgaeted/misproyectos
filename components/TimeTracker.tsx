@@ -4,7 +4,7 @@ import type { Project } from "@/lib/data";
 import type { Run } from "./Workspace";
 import { RunningClock } from "./RunningClock";
 import { todayInChile } from "@/lib/payments";
-import { buildReport, chileLocalToIso, formatDuration, isoToChileLocal, validEntryRange, weekStart, type TimeEntry } from "@/lib/time";
+import { buildReport, changedInstant, chileLocalToIso, formatDuration, isoToChileLocal, validEntryRange, weekStart, type TimeEntry } from "@/lib/time";
 
 const NO_TASK = "Sin tarea asignada";
 const VISIBLE_ENTRIES = 10;
@@ -94,7 +94,7 @@ export function TimeTracker({ project, entries, run, pending }: { project: Proje
       {clockError && <p className="time-error" role="alert">{clockError}</p>}
     </div>
 
-    <p className="time-totals"><span suppressHydrationWarning>Hoy: <strong>{formatDuration(todayMinutes)}</strong></span><span suppressHydrationWarning>Esta semana: <strong>{formatDuration(weekMinutes)}</strong></span></p>
+    <p className="time-totals"><span>Hoy: <strong suppressHydrationWarning>{formatDuration(todayMinutes)}</strong></span><span>Esta semana: <strong suppressHydrationWarning>{formatDuration(weekMinutes)}</strong></span></p>
 
     <h4 className="time-subtitle">Tramos recientes <span className="count">{finished.length}</span></h4>
     <div className="steps-list">
@@ -106,9 +106,9 @@ export function TimeTracker({ project, entries, run, pending }: { project: Proje
         const currentStepId = project.steps.some((step) => step.id === entry.stepId) ? entry.stepId : null;
         return <div key={entry.id} className="step-row time-entry">
           {editingId === entry.id
-            ? <EntryForm steps={project.steps} initialStart={start} initialEnd={end} initialStepId={currentStepId} submitLabel="Guardar cambios" pending={pending}
+            ? <EntryForm steps={project.steps} initialStart={start} initialEnd={end} initialStepId={currentStepId} original={{ startedAt: entry.startedAt, endedAt: entry.endedAt! }} submitLabel="Guardar cambios" pending={pending}
                 submit={async (startedAt, endedAt, stepId) => {
-                  const ok = await rowAction(entry.id, { op: "editTimeEntry", id: entry.id, startedAt, endedAt, ...(stepId === currentStepId ? {} : { stepId }) });
+                  const ok = await rowAction(entry.id, { op: "editTimeEntry", id: entry.id, ...(startedAt ? { startedAt } : {}), ...(endedAt ? { endedAt } : {}), ...(stepId === currentStepId ? {} : { stepId }) });
                   if (ok) setEditingId(null);
                   return ok;
                 }}
@@ -121,7 +121,7 @@ export function TimeTracker({ project, entries, run, pending }: { project: Proje
               <p className="time-entry-task">{name}</p>
               <div className="time-entry-actions">
                 <button type="button" disabled={pending} aria-label={`Editar tramo: ${name}, ${shortDate(start)} ${start.slice(11)}`} onClick={() => { setEditingId(entry.id); setAdding(false); }}>Editar</button>
-                <button type="button" disabled={pending} aria-label={`Borrar tramo: ${name}, ${shortDate(start)} ${start.slice(11)}`} onClick={() => rowAction(entry.id, { op: "removeTimeEntry", id: entry.id })}>Borrar</button>
+                <button type="button" disabled={pending} aria-label={`Borrar tramo: ${name}, ${shortDate(start)} ${start.slice(11)}`} onClick={() => { if (window.confirm("¿Borrar este tramo?")) rowAction(entry.id, { op: "removeTimeEntry", id: entry.id }); }}>Borrar</button>
               </div>
             </>}
           {rowErrors[entry.id] && <p className="time-error" role="alert">{rowErrors[entry.id]}</p>}
@@ -135,6 +135,7 @@ export function TimeTracker({ project, entries, run, pending }: { project: Proje
       ? <div className="time-add">
         <EntryForm steps={project.steps} initialStart={isoToChileLocal(new Date(Date.now() - 3_600_000).toISOString())} initialEnd={isoToChileLocal(new Date().toISOString())} initialStepId={null} submitLabel="Agregar tramo" pending={pending}
           submit={async (startedAt, endedAt, stepId) => {
+            if (!startedAt || !endedAt) return false;
             const ok = await rowAction("add", { op: "addTimeEntry", projectId: project.id, startedAt, endedAt, stepId });
             if (ok) setAdding(false);
             return ok;
@@ -156,9 +157,9 @@ export function TimeTracker({ project, entries, run, pending }: { project: Proje
   </section>;
 }
 
-function EntryForm({ steps, initialStart, initialEnd, initialStepId, submitLabel, pending, submit, cancel }: {
-  steps: Project["steps"]; initialStart: string; initialEnd: string; initialStepId: string | null; submitLabel: string; pending: boolean;
-  submit: (startedAt: string, endedAt: string, stepId: string | null) => Promise<boolean>; cancel: () => void;
+function EntryForm({ steps, initialStart, initialEnd, initialStepId, original, submitLabel, pending, submit, cancel }: {
+  steps: Project["steps"]; initialStart: string; initialEnd: string; initialStepId: string | null; original?: { startedAt: string; endedAt: string }; submitLabel: string; pending: boolean;
+  submit: (startedAt: string | undefined, endedAt: string | undefined, stepId: string | null) => Promise<boolean>; cancel: () => void;
 }) {
   const [start, setStart] = useState(initialStart);
   const [end, setEnd] = useState(initialEnd);
@@ -167,9 +168,12 @@ function EntryForm({ steps, initialStart, initialEnd, initialStepId, submitLabel
   return <form className="time-entry-form" onSubmit={async (event) => {
     event.preventDefault();
     if (!start || !end) { setMessage("Completa el inicio y el fin."); return; }
-    const startedAt = chileLocalToIso(start);
-    const endedAt = chileLocalToIso(end);
-    if (!validEntryRange(new Date(startedAt), new Date(endedAt), new Date())) { setMessage("El inicio debe ser anterior al fin, y el fin no puede estar en el futuro."); return; }
+    // Al editar solo se envían los instantes que el usuario cambió; los demás conservan el original.
+    const startedAt = original ? changedInstant(start, initialStart) : chileLocalToIso(start);
+    const endedAt = original ? changedInstant(end, initialEnd) : chileLocalToIso(end);
+    const effectiveStart = startedAt ?? original!.startedAt;
+    const effectiveEnd = endedAt ?? original!.endedAt;
+    if (!validEntryRange(new Date(effectiveStart), new Date(effectiveEnd), new Date())) { setMessage("El inicio debe ser anterior al fin, y el fin no puede estar en el futuro."); return; }
     setMessage("");
     await submit(startedAt, endedAt, stepId || null);
   }}>

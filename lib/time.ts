@@ -136,3 +136,9 @@ export function formatClock(ms: number): string {
   const pad = (value: number) => String(value).padStart(2, "0");
   return `${pad(Math.floor(totalSeconds / 3600))}:${pad(Math.floor((totalSeconds % 3600) / 60))}:${pad(totalSeconds % 60)}`;
 }
+
+// Al editar, solo se envía el instante cuyo campo local cambió: reconstruirlo desde
+// el texto "datetime-local" pierde los segundos y es ambiguo en la hora repetida de abril.
+export function changedInstant(value: string, initial: string): string | undefined {
+  return value === initial ? undefined : chileLocalToIso(value);
+}
