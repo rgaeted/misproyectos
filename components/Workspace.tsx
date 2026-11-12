@@ -519,7 +519,7 @@ function Card({ project: p, open }: { project: Project; open: () => void }) {
         </button>
       </div>
       {p.runningTimer && (
-        <div className="card-clock" aria-label="Reloj corriendo">
+        <div className="card-clock" role="group" aria-label="Reloj corriendo">
           <span className="card-clock-dot" aria-hidden="true" />
           <RunningClock startedAt={p.runningTimer.startedAt} />
         </div>

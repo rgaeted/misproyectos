@@ -1013,7 +1013,7 @@ kbd {
 .time-clock { display: grid; gap: 12px; }
 .time-clock-main { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .running-clock { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.card-clock { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; max-width: 100%; font-size: 13px; color: var(--lago); }
+.card-clock { display: inline-flex; align-items: center; gap: 6px; margin: 6px 12px 0; max-width: calc(100% - 24px); font-size: 13px; color: var(--lago); }
 .card-clock .running-clock { font-size: 13px; font-weight: 600; }
 .card-clock-dot { width: 8px; height: 8px; flex-shrink: 0; border-radius: 50%; background: var(--lago); }
 .time-field { display: grid; gap: 6px; font-size: 13px; min-width: 0; }
