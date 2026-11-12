@@ -49,7 +49,7 @@ export const projectPatch = z
     archived: z.boolean().optional(),
   })
   .strict();
-const dateString = z
+export const dateString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Usa una fecha válida.")
   .refine((value) => {
